@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os, codecs
+import os, codecs, os.path
 from docutils.core import publish_string
 from docutils.parsers import rst
 from docutils.nodes import list_item
@@ -33,7 +33,7 @@ rst.directives.register_directive('answer', AnswerDirective)
 import moodlexml
 
 def file2text(filename):
-    f = open(sys.argv[1],'r')
+    f = open(filename,'r')
     text = f.read()
     f.close()
     return text
@@ -58,15 +58,28 @@ def question_to_xml(out, q):
         out.write(u'</answer>')
     out.write(u'</question>')
 
-def directory_to_xml(out, topdir):
-    for root, dirs, files in os.walk(topdir):
-        for f in files:
-            print join(root, f)
+def write_category(out, name):
+    out.write(u'<question type="category">')
+    out.write(u'<category><text>%s</text></category>' % name)
+    out.write(u'</question>')
 
-def qlist_to_xml(out, qlist):
+def directory_to_xml(out, topdir):
     out.write(u'<quiz>')
-    for q in qlist:
-        question_to_xml(out, q)
+    for root, dirs, files in os.walk(topdir):
+        count = 0
+        rsts = []
+        for f in files:
+            name, ext = os.path.splitext(f)
+            print name, ext
+            print os.path.join(root, f)
+            if ext == ".rst":
+                rsts.append(os.path.join(root, f))
+                count += 1
+        if count > 0:
+            write_category(out, os.path.relpath(root, topdir))
+        for r in rsts:
+            dic = publish_question(file2text(r))
+            question_to_xml(out, dic)
     out.write(u'</quiz>')
 
 if __name__ == '__main__':
@@ -76,7 +89,8 @@ if __name__ == '__main__':
     #    print k, v
     # out = codecs.open("quiz.xml", 'w', 'utf8')
     # qlist_to_xml(out, [dic])
-    directory_to_xml(sys.stdout, sys.argv[1])
+    output = codecs.open(sys.argv[2], 'w', 'utf8')
+    directory_to_xml(output, sys.argv[1])
     # print publish_string(file2text(sys.argv[1]))
     
     
