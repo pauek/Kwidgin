@@ -68,15 +68,15 @@ def directory_to_xml(out, topdir):
     for root, dirs, files in os.walk(topdir):
         count = 0
         rsts = []
+        rel = os.path.relpath(root, topdir)
         for f in files:
             name, ext = os.path.splitext(f)
-            print name, ext
-            print os.path.join(root, f)
             if ext == ".rst":
+                print os.path.join(rel, f)
                 rsts.append(os.path.join(root, f))
                 count += 1
         if count > 0:
-            write_category(out, os.path.relpath(root, topdir))
+            write_category(out, rel)
         for r in rsts:
             dic = publish_question(file2text(r))
             question_to_xml(out, dic)
@@ -84,13 +84,8 @@ def directory_to_xml(out, topdir):
 
 if __name__ == '__main__':
     import sys
-    # dic = publish_question(file2text(sys.argv[1]))
-    # for k, v in dic.iteritems():
-    #    print k, v
-    # out = codecs.open("quiz.xml", 'w', 'utf8')
-    # qlist_to_xml(out, [dic])
-    output = codecs.open(sys.argv[2], 'w', 'utf8')
-    directory_to_xml(output, sys.argv[1])
-    # print publish_string(file2text(sys.argv[1]))
+    _, directory, outfile = sys.argv
+    output = codecs.open(outfile, 'w', 'utf8')
+    directory_to_xml(output, directory)
     
     

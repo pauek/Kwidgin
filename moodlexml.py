@@ -87,7 +87,15 @@ class MoodleTranslator(nodes.NodeVisitor):
         self.target = self.last
     
     def visit_enumerated_list(self, node):
-        self.target.append('<ol>')
+        style = {
+            'arabic': 'decimal',
+            'loweralpha': 'lower-alpha',
+            'upperalpha': 'upper-alpha',
+            'lowerroman': 'lower-roman',
+            'upperroman': 'upper-roman'
+            }
+        typ = node['enumtype']
+        self.target.append('<ol style="list-style-type: %s">' % style[typ])
 
     def depart_enumerated_list(self, node):
         self.target.append('</ol>')
