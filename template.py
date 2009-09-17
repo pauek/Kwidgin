@@ -14,6 +14,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+# Modifications (Pau Fernández <pau.fernandez@upc.edu>):
+# - Added preamble (a block '{% ... %}' starting at pos 0).
+
 """A simple template system that compiles templates to Python code.
 
 Basic usage looks like:
