@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- encoding: utf-8 -*-
 #
 # Copyright 2009 Facebook
 #
@@ -90,7 +91,6 @@ import escape
 import logging
 import os.path
 import re
-import random
 
 class Template(object):
     """A compiled template.
@@ -123,7 +123,6 @@ class Template(object):
             "url_escape": escape.url_escape,
             "squeeze": escape.squeeze,
             "datetime": datetime,
-            "random": random.random,
         }
         namespace.update(kwargs)
         exec self.compiled in namespace

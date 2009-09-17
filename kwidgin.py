@@ -49,9 +49,6 @@ class FlattenAnswers(Transform):
 
 ## MoodleXML Writer
 
-def _pr_typ(x):
-    print "Type:", x.__class__.__name__
-
 class MoodleTranslator(nodes.NodeVisitor):
     def __init__(self, document):
         nodes.NodeVisitor.__init__(self, document)
@@ -80,6 +77,12 @@ class MoodleTranslator(nodes.NodeVisitor):
 
     def depart_paragraph(self, node):
         self.target.append(u'</p>')
+
+    def visit_emphasis(self, node):
+        self.target.append(u'<em>')
+
+    def depart_emphasis(self, node):
+        self.target.append(u'</em>')
 
     def visit_literal(self, node):
         self.target.append(u'<span style="font-family: monospace; font-size: 120%">')
@@ -139,7 +142,7 @@ class Writer(writers.Writer):
 
 ## publisher
 
-num_permutations = 10
+num_permutations = 3
 
 def _file2string(filename):
     f = codecs.open(filename, 'r', 'utf-8')
@@ -169,7 +172,7 @@ def question_to_xml(out, q):
 
 def category_to_xml(out, name):
     out.write(u'<question type="category">')
-    out.write(u'<category><text>%s</text></category>' % name)
+    out.write(u'<category><text>%s</text></category>' % name.decode('utf-8'))
     out.write(u'</question>')
 
 def directory_to_xml(out, topdir):
@@ -191,18 +194,19 @@ def directory_to_xml(out, topdir):
                     
         if count > 0 and rel != ".":
             category_to_xml(out, rel)
+        for r in rsts:
+            txt = _file2string(r)
+            dic = publish_question(txt)
+            question_to_xml(out, dic)
         for t in t_rsts:
-            prefix, _ = os.path.splitext(t)
+            path = os.path.relpath(t, topdir)
+            prefix, _ = os.path.splitext(path)
             category_to_xml(out, prefix)
             templ = template.Template(_file2string(t))
             for i in xrange(num_permutations):
                 dic = publish_question(templ.generate())
                 dic['title'] += u' (permutació %d)' % i
                 question_to_xml(out, dic)
-        for r in rsts:
-            txt = _file2string(r)
-            dic = publish_question(txt)
-            question_to_xml(out, dic)
     out.write(u'</quiz>')
 
 if __name__ == '__main__':
