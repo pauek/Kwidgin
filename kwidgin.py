@@ -1,6 +1,8 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import os, codecs, os.path
+import escape
 from docutils import core, nodes, writers
 from docutils.parsers import rst
 from docutils.transforms import Transform
@@ -47,13 +49,8 @@ class FlattenAnswers(Transform):
 
 ## MoodleXML Writer
 
-def _encode(text):
-    text = text.replace("&", "&amp;")
-    text = text.replace("<", "&lt;")
-    text = text.replace('"', "&quot;")
-    text = text.replace(">", "&gt;")
-    text = text.replace("@", "&#64;")
-    return text
+def _pr_typ(x):
+    print "Type:", x.__class__.__name__
 
 class MoodleTranslator(nodes.NodeVisitor):
     def __init__(self, document):
@@ -72,21 +69,23 @@ class MoodleTranslator(nodes.NodeVisitor):
     def depart_document(self, node): pass
 
     def visit_Text(self, node):
-        self.target.append(_encode(node.astext()))
+        txt = node.astext().encode('utf-8')
+        esc = escape.xhtml_escape(txt)
+        self.target.append(esc.decode('utf-8'))
 
     def depart_Text(self, node): pass
 
     def visit_paragraph(self, node):
-        self.target.append('<p>')
+        self.target.append(u'<p>')
 
     def depart_paragraph(self, node):
-        self.target.append('</p>')
+        self.target.append(u'</p>')
 
     def visit_literal(self, node):
-        self.target.append('<span style="font-family: monospace; font-size: 120%">')
+        self.target.append(u'<span style="font-family: monospace; font-size: 120%">')
     
     def depart_literal(self, node):
-        self.target.append('</span>')
+        self.target.append(u'</span>')
 
     def visit_answer(self, node):
         self.last = self.target
@@ -107,17 +106,17 @@ class MoodleTranslator(nodes.NodeVisitor):
 
     def visit_enumerated_list(self, node):
         typ = node['enumtype']
-        self.target.append('<ol style="list-style-type: %s">' 
+        self.target.append(u'<ol style="list-style-type: %s">' 
                            % self.enumerated_style[typ])
 
     def depart_enumerated_list(self, node):
-        self.target.append('</ol>')
+        self.target.append(u'</ol>')
 
     def visit_list_item(self, node):
-        self.target.append('<li>')
+        self.target.append(u'<li>')
 
     def depart_list_item(self, node):
-        self.target.append('</li>')
+        self.target.append(u'</li>')
 
 class Writer(writers.Writer):
     def __init__(self):
@@ -140,8 +139,10 @@ class Writer(writers.Writer):
 
 ## publisher
 
-def file2string(filename):
-    f = open(filename,'r')
+num_permutations = 10
+
+def _file2string(filename):
+    f = codecs.open(filename, 'r', 'utf-8')
     text = f.read()
     f.close()
     return text
@@ -175,18 +176,32 @@ def directory_to_xml(out, topdir):
     out.write(u'<quiz>')
     for root, dirs, files in os.walk(topdir):
         count = 0
-        rsts = []
+        trsts, rsts = [], []
         rel = os.path.relpath(root, topdir)
         for f in files:
-            name, ext = os.path.splitext(f)
+            prefix, ext = os.path.splitext(f)
             if ext == ".rst":
                 print os.path.join(rel, f)
                 rsts.append(os.path.join(root, f))
                 count += 1
+            elif ext == '.trst':
+                print os.path.join(rel, f)
+                trsts.append(os.path.join(root, f))
+                count += 1
+                    
         if count > 0:
             category_to_xml(out, rel)
+        for t in trsts:
+            prefix, _ = os.path.splitext(t)
+            category_to_xml(out, prefix)
+            templ = template.Template(_file2string(t))
+            for i in xrange(num_permutations):
+                dic = publish_question(templ.generate())
+                dic['title'] += u" (permutació %d)" % i
+                question_to_xml(out, dic)
         for r in rsts:
-            dic = publish_question(file2string(r))
+            txt = _file2string(r)
+            dic = publish_question(txt)
             question_to_xml(out, dic)
     out.write(u'</quiz>')
 
@@ -195,5 +210,3 @@ if __name__ == '__main__':
     _, directory, outfile = sys.argv
     output = codecs.open(outfile, 'w', 'utf8')
     directory_to_xml(output, directory)
-    
-    
