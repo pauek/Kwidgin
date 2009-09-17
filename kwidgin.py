@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os, codecs, os.path
-import escape
+import escape, template
 from docutils import core, nodes, writers
 from docutils.parsers import rst
 from docutils.transforms import Transform
@@ -176,7 +176,7 @@ def directory_to_xml(out, topdir):
     out.write(u'<quiz>')
     for root, dirs, files in os.walk(topdir):
         count = 0
-        trsts, rsts = [], []
+        t_rsts, rsts = [], []
         rel = os.path.relpath(root, topdir)
         for f in files:
             prefix, ext = os.path.splitext(f)
@@ -186,18 +186,18 @@ def directory_to_xml(out, topdir):
                 count += 1
             elif ext == '.trst':
                 print os.path.join(rel, f)
-                trsts.append(os.path.join(root, f))
+                t_rsts.append(os.path.join(root, f))
                 count += 1
                     
-        if count > 0:
+        if count > 0 and rel != ".":
             category_to_xml(out, rel)
-        for t in trsts:
+        for t in t_rsts:
             prefix, _ = os.path.splitext(t)
             category_to_xml(out, prefix)
             templ = template.Template(_file2string(t))
             for i in xrange(num_permutations):
                 dic = publish_question(templ.generate())
-                dic['title'] += u" (permutació %d)" % i
+                dic['title'] += u' (permutació %d)' % i
                 question_to_xml(out, dic)
         for r in rsts:
             txt = _file2string(r)

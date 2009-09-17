@@ -87,7 +87,7 @@ import escape
 import logging
 import os.path
 import re
-
+import random
 
 class Template(object):
     """A compiled template.
@@ -102,6 +102,8 @@ class Template(object):
             compress_whitespace = name.endswith(".html") or \
                 name.endswith(".js")
         reader = _TemplateReader(name, template_string)
+
+        self.preamble = _parse_preamble(reader)
         self.file = _File(_parse(reader))
         self.code = self._generate_python(loader, compress_whitespace)
         try:
@@ -118,6 +120,7 @@ class Template(object):
             "url_escape": escape.url_escape,
             "squeeze": escape.squeeze,
             "datetime": datetime,
+            "random": random.random,
         }
         namespace.update(kwargs)
         exec self.compiled in namespace
@@ -140,10 +143,17 @@ class Template(object):
             self.file.find_named_blocks(loader, named_blocks)
             writer = _CodeWriter(buffer, named_blocks, loader, self,
                                  compress_whitespace)
+            self._write_preamble(writer)
             ancestors[0].generate(writer)
             return buffer.getvalue()
         finally:
             buffer.close()
+
+    def _write_preamble(self, writer):
+        for line in self.preamble:
+            writer.write_line(line)
+        writer.write_line("")
+        
 
     def _get_ancestors(self, loader):
         ancestors = [self.file]
@@ -420,7 +430,7 @@ class _TemplateReader(object):
     def __getitem__(self, key):
         if type(key) is slice:
             size = len(self)
-            start, stop, step = slice.indices(size)
+            start, stop, step = key.indices(size)
             if start is None: start = self.pos
             else: start += self.pos
             if stop is not None: stop += self.pos
@@ -439,6 +449,17 @@ def _format_code(code):
     format = "%%%dd  %%s\n" % len(repr(len(lines) + 1))
     return "".join([format % (i + 1, line) for (i, line) in enumerate(lines)])
 
+def _parse_preamble(reader):
+    lines = []
+    if reader[0:2] == "{%":
+        reader.consume(2)
+        end = reader.find("%}")
+        content = reader.consume(end)
+        reader.consume(2)
+        io = cStringIO.StringIO(content.encode('utf-8'))
+        lines = [l[:-1] for l in io.readlines()]
+        io.close()
+    return lines
 
 def _parse(reader, in_block=None):
     body = _ChunkList([])
