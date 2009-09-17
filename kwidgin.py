@@ -1,28 +1,29 @@
 #!/usr/bin/env python
 
 import os, codecs, os.path
-from docutils.core import publish_string
+from docutils import core, nodes, writers
 from docutils.parsers import rst
-from docutils.nodes import list_item
+from docutils.transforms import Transform
 
-class answer(list_item):
-    def __init__(self, t_or_f):
-        self.true_or_false = t_or_f
-        list_item.__init__(self)
-    
+## Docutils stuff
+
 def truefalse(argument):
     return rst.directives.choice(argument, ('false', 'true'))
+
+class answer(nodes.list_item):
+    def __init__(self, t_or_f):
+        self.true_or_false = t_or_f
+        nodes.list_item.__init__(self)
 
 class AnswerDirective(rst.Directive):
     required_arguments = 1
     optional_arguments = 0
-    option_spec = { 'true_or_false': truefalse }
     has_content = True
 
     def run(self):
         self.assert_has_content()
         args = self.arguments
-        if args[0] != 'true' and args[0] != 'false':
+        if args[0] not in ('true', 'false'):
             raise self.error("Argument must be `true' or `false'")
         node = answer(args[0] == 'true')
         self.state.nested_parse(self.content, self.content_offset, node)
@@ -30,7 +31,112 @@ class AnswerDirective(rst.Directive):
 
 rst.directives.register_directive('answer', AnswerDirective)
 
-import moodlexml
+## Transforms
+
+class FlattenAnswers(Transform):
+    default_priority = 900
+
+    def apply(self):
+        for node in self.document.traverse(answer):
+            if len(node) == 1 and isinstance(node[0], nodes.paragraph):
+                para = node[0]
+                new_ans = answer(node.true_or_false)
+                for item in para:
+                    new_ans += item
+                node.replace_self(new_ans)
+
+## MoodleXML Writer
+
+def _encode(text):
+    text = text.replace("&", "&amp;")
+    text = text.replace("<", "&lt;")
+    text = text.replace('"', "&quot;")
+    text = text.replace(">", "&gt;")
+    text = text.replace("@", "&#64;")
+    return text
+
+class MoodleTranslator(nodes.NodeVisitor):
+    def __init__(self, document):
+        nodes.NodeVisitor.__init__(self, document)
+        self.settings = document.settings
+        self.body = []
+        self.answers = []
+        self.scratch = []
+        self.target = None
+        self.last = None
+
+    def visit_document(self, node):
+        self.target = self.body
+        self.title = node.get('title', '')
+
+    def depart_document(self, node): pass
+
+    def visit_Text(self, node):
+        self.target.append(_encode(node.astext()))
+
+    def depart_Text(self, node): pass
+
+    def visit_paragraph(self, node):
+        self.target.append('<p>')
+
+    def depart_paragraph(self, node):
+        self.target.append('</p>')
+
+    def visit_literal(self, node):
+        self.target.append('<span style="font-family: monospace; font-size: 120%">')
+    
+    def depart_literal(self, node):
+        self.target.append('</span>')
+
+    def visit_answer(self, node):
+        self.last = self.target
+        self.target = self.scratch
+
+    def depart_answer(self, node):
+        self.answers.append( (node.true_or_false, ''.join(self.scratch)) )
+        self.scratch = []
+        self.target = self.last
+    
+    def visit_enumerated_list(self, node):
+        style = {
+            'arabic': 'decimal',
+            'loweralpha': 'lower-alpha',
+            'upperalpha': 'upper-alpha',
+            'lowerroman': 'lower-roman',
+            'upperroman': 'upper-roman'
+            }
+        typ = node['enumtype']
+        self.target.append('<ol style="list-style-type: %s">' % style[typ])
+
+    def depart_enumerated_list(self, node):
+        self.target.append('</ol>')
+
+    def visit_list_item(self, node):
+        self.target.append('<li>')
+
+    def depart_list_item(self, node):
+        self.target.append('</li>')
+
+class Writer(writers.Writer):
+    def __init__(self):
+        writers.Writer.__init__(self)
+        self.translator = None
+
+    def get_transforms(self):
+        return writers.Writer.get_transforms(self) + [FlattenAnswers]
+
+    def translate(self):
+        self.translator = MoodleTranslator(self.document)
+        self.document.walkabout(self.translator)
+        self.output = self.parts
+
+    def assemble_parts(self):
+        writers.Writer.assemble_parts(self)
+        self.parts['title'] = self.translator.title
+        self.parts['body'] = ''.join(self.translator.body)
+        self.parts['answers'] = self.translator.answers
+
+## publisher
 
 def file2text(filename):
     f = open(filename,'r')
@@ -39,7 +145,7 @@ def file2text(filename):
     return text
 
 def publish_question(text):
-    return publish_string(text, writer = moodlexml.Writer())
+    return core.publish_string(text, writer = Writer())
 
 def question_to_xml(out, q):
     out.write(u'<question type="multichoice">')
@@ -58,7 +164,7 @@ def question_to_xml(out, q):
         out.write(u'</answer>')
     out.write(u'</question>')
 
-def write_category(out, name):
+def category_to_xml(out, name):
     out.write(u'<question type="category">')
     out.write(u'<category><text>%s</text></category>' % name)
     out.write(u'</question>')
@@ -76,7 +182,7 @@ def directory_to_xml(out, topdir):
                 rsts.append(os.path.join(root, f))
                 count += 1
         if count > 0:
-            write_category(out, rel)
+            category_to_xml(out, rel)
         for r in rsts:
             dic = publish_question(file2text(r))
             question_to_xml(out, dic)
