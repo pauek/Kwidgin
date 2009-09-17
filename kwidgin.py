@@ -5,7 +5,7 @@ from docutils import core, nodes, writers
 from docutils.parsers import rst
 from docutils.transforms import Transform
 
-## Docutils stuff
+## Docutils nodes and directives
 
 def truefalse(argument):
     return rst.directives.choice(argument, ('false', 'true'))
@@ -97,16 +97,18 @@ class MoodleTranslator(nodes.NodeVisitor):
         self.scratch = []
         self.target = self.last
     
+    enumerated_style = {
+        'arabic': 'decimal',
+        'loweralpha': 'lower-alpha',
+        'upperalpha': 'upper-alpha',
+        'lowerroman': 'lower-roman',
+        'upperroman': 'upper-roman'
+        }
+
     def visit_enumerated_list(self, node):
-        style = {
-            'arabic': 'decimal',
-            'loweralpha': 'lower-alpha',
-            'upperalpha': 'upper-alpha',
-            'lowerroman': 'lower-roman',
-            'upperroman': 'upper-roman'
-            }
         typ = node['enumtype']
-        self.target.append('<ol style="list-style-type: %s">' % style[typ])
+        self.target.append('<ol style="list-style-type: %s">' 
+                           % self.enumerated_style[typ])
 
     def depart_enumerated_list(self, node):
         self.target.append('</ol>')
@@ -138,7 +140,7 @@ class Writer(writers.Writer):
 
 ## publisher
 
-def file2text(filename):
+def file2string(filename):
     f = open(filename,'r')
     text = f.read()
     f.close()
@@ -184,7 +186,7 @@ def directory_to_xml(out, topdir):
         if count > 0:
             category_to_xml(out, rel)
         for r in rsts:
-            dic = publish_question(file2text(r))
+            dic = publish_question(file2string(r))
             question_to_xml(out, dic)
     out.write(u'</quiz>')
 
