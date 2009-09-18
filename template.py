@@ -152,6 +152,7 @@ class Template(object):
             buffer.close()
 
     def _write_preamble(self, writer):
+        writer.write_line("# -*- coding: utf-8 -*-")
         for line in self.preamble:
             writer.write_line(line)
         writer.write_line("")
@@ -458,7 +459,7 @@ def _parse_preamble(reader):
         end = reader.find("%}")
         content = reader.consume(end)
         reader.consume(2)
-        io = cStringIO.StringIO(content.encode('utf-8'))
+        io = cStringIO.StringIO(content)
         lines = [l[:-1] for l in io.readlines()]
         io.close()
     return lines
