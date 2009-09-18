@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os, codecs, os.path
-import escape, template, opster, random, string
+import escape, template, opster, random, string, hashlib
 import ConfigParser, cStringIO
 from docutils import core, nodes, writers
 from docutils.parsers import rst
@@ -63,68 +63,81 @@ class FlattenAnswers(Transform):
                     new_ans += item
                 node.replace_self(new_ans)
 
-## MoodleXML Writer
+class ShuffleAnswers(Transform):
+    default_priority = 910
 
-class MoodleTranslator(nodes.NodeVisitor):
+    def apply(self):
+        # Collect answers
+        answers = []
+        for a in self.document.traverse(answer):
+            answers.append(a)
+        shuffled = copy(answers)
+        random.shuffle(shuffled)
+        for a, s in zip(answers, shuffled):
+            a.replace_self(s)
+
+## Translators
+
+class BaseTranslator(nodes.NodeVisitor):
     def __init__(self, document):
         nodes.NodeVisitor.__init__(self, document)
-        self.settings = document.settings
-        self.body = []
-        self.answers = []
+        # self.settings = document.settings
+        self.parts = {}
+        self.parts['answers'] = []
         self.scratch = []
-        self.target = None
-        self.last = None
+        self.title = self.last = None
+        self.target = self.parts['question'] = []
+        
+    def put(self, s):
+        self.target.append(s)
 
     def visit_document(self, node):
-        self.target = self.body
-        self.title = node.get('title', '')
+        self.parts['title'] = node.get('title', '')
 
-    def depart_document(self, node): pass
-
-    def visit_Text(self, node):
-        txt = node.astext().encode('utf-8')
-        esc = escape.xhtml_escape(txt)
-        self.target.append(esc.decode('utf-8'))
-
-    def depart_Text(self, node): pass
-
-    def visit_question(self, node): pass
-    def depart_question(self, node): pass
-
-    def visit_paragraph(self, node):
-        self.target.append(u'<p>')
-
-    def depart_paragraph(self, node):
-        self.target.append(u'</p>')
-
-    def visit_literal_block(self, node):
-        style = 'font-family: monospace; font-size: 120%; margin-left: 1.6em'
-        self.target.append('<p style="%s">' % style)
-
-    def depart_literal_block(self, node):
-        self.target.append('</p>')
-
-    def visit_emphasis(self, node):
-        self.target.append(u'<em>')
-
-    def depart_emphasis(self, node):
-        self.target.append(u'</em>')
-
-    def visit_literal(self, node):
-        self.target.append(u'<span style="font-family: monospace; font-size: 120%">')
-    
-    def depart_literal(self, node):
-        self.target.append(u'</span>')
+    def depart_document(self, node):
+        self.parts['question'] = u''.join(self.parts['question'])
 
     def visit_answer(self, node):
         self.last = self.target
         self.target = self.scratch
 
     def depart_answer(self, node):
-        self.answers.append( (node.true_or_false, ''.join(self.scratch)) )
+        answ = (node.true_or_false, u''.join(self.scratch))
+        self.parts['answers'].append(answ)
         self.scratch = []
         self.target = self.last
     
+class MoodleXMLTranslator(BaseTranslator):
+
+    def visit_Text(self, node):
+        txt = node.astext().encode('utf-8')
+        esc = escape.xhtml_escape(txt)
+        self.put(esc.decode('utf-8'))
+
+    def depart_Text(self, node): pass
+
+    def visit_question(self, node): pass
+    def depart_question(self, node): pass
+
+    def visit_paragraph(self, node):  self.put('<p>')
+    def depart_paragraph(self, node): self.put('</p>')
+
+    def visit_literal_block(self, node):
+        style = 'font-family: monospace; font-size: 120%; margin-left: 1.6em'
+        self.put('<p style="%s">' % style)
+
+    def depart_literal_block(self, node):
+        self.put('</p>')
+
+    def visit_emphasis(self, node):  self.put('<em>')
+    def depart_emphasis(self, node): self.put('</em>')
+
+    def visit_literal(self, node):
+        self.put('<span style="font-family: monospace; font-size: 120%">')
+    
+    def depart_literal(self, node):
+        self.put('</span>')
+
     enumerated_style = {
         'arabic': 'decimal',
         'loweralpha': 'lower-alpha',
@@ -135,36 +148,113 @@ class MoodleTranslator(nodes.NodeVisitor):
 
     def visit_enumerated_list(self, node):
         typ = node['enumtype']
-        self.target.append(u'<ol style="list-style-type: %s">' 
+        self.put(u'<ol style="list-style-type: %s">' 
                            % self.enumerated_style[typ])
 
     def depart_enumerated_list(self, node):
-        self.target.append(u'</ol>')
+        self.put(u'</ol>')
+
+    def visit_list_item(self, node):  self.put('<li>')
+    def depart_list_item(self, node): self.put('</li>')
+
+class LaTeXTranslator(BaseTranslator):
+
+    def visit_question(self, node): 
+        self.put("\\begin{pregunta}\n")
+        
+    def depart_question(self, node):
+        self.put("\\end{pregunta}\n")
+
+    def visit_Text(self, node):
+        self.put(node.astext())
+
+    def depart_Text(self, node): pass
+
+    def visit_paragraph(self, node): pass
+    def depart_paragraph(self, node):
+        self.put('\n\n')
+
+    def visit_literal_block(self, node):
+        self.put('\\vspace{-.4em}\n\\begin{Verbatim}\n')
+
+    def depart_literal_block(self, node):
+        self.put('\n\\end{Verbatim}\n\\vspace{-.4em}')
+
+    def visit_emphasis(self, node):
+        self.put('\\emph{')
+
+    def depart_emphasis(self, node):
+        self.put('}')
+
+    def visit_literal(self, node):
+        self.put('\\Verb|')
+    
+    def depart_literal(self, node):
+        self.put('|')
+
+    def visit_answer(self, node):
+        BaseTranslator.visit_answer(self, node)
+        if node.true_or_false:
+            self.put('\\vertadera{')
+        else:
+            self.put('\\falsa{')
+
+    def depart_answer(self, node):
+        self.put('}\n')
+        BaseTranslator.depart_answer(self, node)
+    
+    enumerated_style = {
+        'arabic':     '1',
+        'loweralpha': 'a',
+        'upperalpha': 'A',
+        'lowerroman': 'i',
+        'upperroman': 'I'
+        }
+
+    def visit_enumerated_list(self, node):
+        typ = node['enumtype']
+        self.put('\\begin{enumerate}[%s.]\n'
+                           % self.enumerated_style[typ])
+        self.put('\\addtolength{\\itemsep}{-\parskip}\n')
+        self.put('\\setlength{\\itemindent}{1em}\n')
+
+    def depart_enumerated_list(self, node):
+        self.put('\\end{enumerate}\n')
 
     def visit_list_item(self, node):
-        self.target.append(u'<li>')
+        self.put('\item ')
 
-    def depart_list_item(self, node):
-        self.target.append(u'</li>')
+    def depart_list_item(self, node): pass
 
-class MoodleXMLWriter(writers.Writer):
+## Writers
+
+class QuestionWriter(writers.Writer):
+    translator_class = None
+    transforms = []
+
     def __init__(self):
         writers.Writer.__init__(self)
         self.translator = None
 
     def get_transforms(self):
-        return writers.Writer.get_transforms(self) + [FlattenAnswers]
+        return writers.Writer.get_transforms(self) + self.transforms
 
     def translate(self):
-        self.translator = MoodleTranslator(self.document)
+        self.translator = self.translator_class(self.document)
         self.document.walkabout(self.translator)
         self.output = self.parts
 
     def assemble_parts(self):
         writers.Writer.assemble_parts(self)
-        self.parts['title'] = self.translator.title
-        self.parts['body'] = ''.join(self.translator.body)
-        self.parts['answers'] = self.translator.answers
+        self.parts = self.translator.parts
+
+class MoodleXMLWriter(QuestionWriter):
+    translator_class = MoodleXMLTranslator
+    transforms = [FlattenAnswers]
+
+class LaTeXWriter(QuestionWriter):
+    translator_class = LaTeXTranslator
+    transforms = [ShuffleAnswers, FlattenAnswers]
 
 ## MoodleXML publisher
 
@@ -178,7 +268,7 @@ def question_to_xml(out, q):
     out.write(u'<question type="multichoice">')
     out.write(u'<name><text>%s</text></name>' % q['title'])
     out.write(u'<questiontext format="html">')
-    out.write(u'<text><![CDATA[%s]]></text>' % q['body'])
+    out.write(u'<text><![CDATA[%s]]></text>' % q['question'])
     out.write(u'</questiontext>')
     out.write(u'<defaultgrade>1</defaultgrade>')
     out.write(u'<shuffleanswers>1</shuffleanswers>')
@@ -218,7 +308,7 @@ def directory_to_xml(out, topdir):
             category_to_xml(out, rel)
         for r in rsts:
             txt = _file2string(r)
-            dic = core.publish_string(txt, writer = MoodleXMLWriter())
+            dic = core.publish_parts(txt, writer = MoodleXMLWriter())
             question_to_xml(out, dic)
         for t in t_rsts:
             path = os.path.relpath(t, topdir)
@@ -228,142 +318,50 @@ def directory_to_xml(out, topdir):
                                       os.path.basename(t))
             for i in xrange(Prefs.num_permutations):
                 text = templ.generate()
-                dic = core.publish_string(text, writer = MoodleXMLWriter())
+                dic = core.publish_parts(text, writer = MoodleXMLWriter())
                 dic['title'] += u' (permutació %d)' % i
                 question_to_xml(out, dic)
     out.write(u'</quiz>')
 
-# Genexam
+## Genexam (LaTeX publisher)
 
-class ShuffleAnswers(Transform):
-    default_priority = 910
-
-    def apply(self):
-        # Collect answers
-        answers = []
-        for a in self.document.traverse(answer):
-            answers.append(a)
-        shuffled = copy(answers)
-        random.shuffle(shuffled)
-        for a, s in zip(answers, shuffled):
-            a.replace_self(s)
-
-class LaTeXWriter(writers.Writer):
-    def get_transforms(self):
-        added = [FlattenAnswers, ShuffleAnswers]
-        return writers.Writer.get_transforms(self) + added
-
-    def translate(self):
-        translator = LaTeXTranslator(self.document)
-        self.document.walkabout(translator)
-        self.output = ''.join(translator.output)
-
-class LaTeXTranslator(nodes.NodeVisitor):
-    def __init__(self, document):
-        nodes.NodeVisitor.__init__(self, document)
-        self.settings = document.settings
-        self.answers = []
-        self.output = []
-
-    def visit_document(self, node): pass
-    def depart_document(self, node): pass
-
-    def visit_question(self, node): 
-        self.output.append("\\begin{pregunta}\n")
-        
-    def depart_question(self, node):
-        self.output.append("\\end{pregunta}\n")
-
-    def visit_Text(self, node):
-        self.output.append(node.astext())
-
-    def depart_Text(self, node): pass
-
-    def visit_paragraph(self, node): pass
-    def depart_paragraph(self, node):
-        self.output.append('\n\n')
-
-    def visit_literal_block(self, node):
-        self.output.append('\\vspace{-.4em}\n\\begin{Verbatim}\n')
-
-    def depart_literal_block(self, node):
-        self.output.append('\n\\end{Verbatim}\n\\vspace{-.4em}')
-
-    def visit_emphasis(self, node):
-        self.output.append('\\emph{')
-
-    def depart_emphasis(self, node):
-        self.output.append('}')
-
-    def visit_literal(self, node):
-        self.output.append('\\Verb|')
-    
-    def depart_literal(self, node):
-        self.output.append('|')
-
-    def visit_answer(self, node):
-        if node.true_or_false:
-            self.output.append('\\vertadera{')
-        else:
-            self.output.append('\\falsa{')
-
-    def depart_answer(self, node):
-        self.output.append('}\n')
-    
-    enumerated_style = {
-        'arabic':     '1',
-        'loweralpha': 'a',
-        'upperalpha': 'A',
-        'lowerroman': 'i',
-        'upperroman': 'I'
-        }
-
-    def visit_enumerated_list(self, node):
-        typ = node['enumtype']
-        self.output.append('\\begin{enumerate}[%s.]\n'
-                           % self.enumerated_style[typ])
-        self.output.append('\\addtolength{\\itemsep}{-\parskip}\n')
-        self.output.append('\\setlength{\\itemindent}{1em}\n')
-
-    def depart_enumerated_list(self, node):
-        self.output.append('\\end{enumerate}\n')
-
-    def visit_list_item(self, node):
-        self.output.append('\item ')
-
-    def depart_list_item(self, node): pass
-    
-
-def generate_exam(permutation, config, templ_list, filename):
+def generate_exam(permutation, config, templ_list, basename):
     cfg = {}
     for x in ('assignatura', 'especialitat', 'temps', 'titol'):
         cfg[x] = config.get(u'exàmen', x)
     
-    with codecs.open(filename, 'w', 'utf-8') as out:
-        out.write("%%%% Permutacio: %d\n" % permutation)
+    solutions = ""
+    indices = range(len(templ_list))
+    random.shuffle(indices)
+    with codecs.open('tex/' + basename + '.tex', 'w', 'utf-8') as o:
+        o.write("%%%% Permutacio: %d\n" % permutation)
         solucio = ""
         if Prefs.show_answers:
             solucio = "-solucio"
-        out.write("\\documentclass{test-fi%s}\n\n" % solucio)
-        out.write("\\begin{document}")
-        out.write("\\Permutacio{%d}" % permutation)
-        out.write("\\Assignatura{%s}" % cfg['assignatura'])
-        out.write("\\Especialitat{%s}" % cfg['especialitat'])
-        out.write("\\TempsMaxim{%s}" % cfg['temps'])
-        out.write("\\Titol{%s}" % cfg['titol'])
-        out.write("\\NumPreguntes{%d}\n" % len(templ_list))
-        out.write("\\capsalera\n\n")
-        out.write("\\begin{multicols*}{2}\n")
-        lst = copy(templ_list)
-        random.shuffle(lst)
-        for t in lst:
+        o.write("\\documentclass{test-fi%s}\n\n" % solucio)
+        o.write("\\begin{document}")
+        o.write("\\Permutacio{%d}" % permutation)
+        o.write("\\Assignatura{%s}" % cfg['assignatura'])
+        o.write("\\Especialitat{%s}" % cfg['especialitat'])
+        o.write("\\TempsMaxim{%s}" % cfg['temps'])
+        o.write("\\Titol{%s}" % cfg['titol'])
+        o.write("\\NumPreguntes{%d}\n" % len(templ_list))
+        o.write("\\capsalera\n\n")
+        o.write("\\begin{multicols*}{2}\n")
+        for i in indices:
+            t = templ_list[i]
             print permutation, t.name
-            rst = t.generate()
-            latex = core.publish_string(rst, writer = LaTeXWriter(),
-                                        settings_overrides = {'output_encoding': 'unicode'})
-            out.write(latex)
-        out.write("\\end{multicols*}\n")
-        out.write("\\end{document}\n")
+            q = core.publish_parts(t.generate(), writer = LaTeXWriter())
+            o.write(q['question'])
+            random.shuffle(q['answers'])
+            for a in q['answers']: o.write(a[1])
+            t_or_f = [a[0] for a in q['answers']]
+            solutions += ['a', 'b', 'c', 'd', 'e', 'f'][t_or_f.index(True)]
+        print solutions
+        o.write("\\end{multicols*}\n")
+        o.write("\\end{document}\n")
+
+    return solutions, indices
 
 Makefile_text = """
 PDF=${pdflist}
@@ -377,38 +375,41 @@ enunciat.pdf: $${PDF}
 
 all: enunciat.pdf
 
+view: all
+\tgnome-open enunciat.pdf
+
 clean:
 \trm -f $${PDF} *.aux *.log enunciat.pdf
 """
 
 def generate_exam_dir(config, output_dir, num_exams):
-    templs = []
-    root = config.get('preguntes', 'root')
-    filelist = config.get('preguntes', 'list').split('\n')
-    for f in filelist:
-        fname = os.path.join(root, f)
-        templ = template.Template(_file2string(fname).encode('utf-8'), 
-                                  f.encode('utf-8'))
-        templs.append(templ)
-    lastdir = os.getcwd()
-
     # Create directories
     if not os.path.isdir(output_dir): os.mkdir(output_dir)
     os.chdir(output_dir)
     if not os.path.isdir('tex'): os.mkdir('tex')
 
-    # TODO: Fix this
-    #
-    # Write config (no puedo en UTF-8!!) 
-    # with codecs.open('exam.cfg', 'w', 'utf-8') as cfgout:
-    #   config.write(cfgout)
+    # Read questions
+    templs = []
+    root = config.get('preguntes', 'root')
+    filelist = config.get('preguntes', 'list').split('\n')
+    with codecs.open('questions.inf', 'w', 'utf-8') as o:
+        for k, f in enumerate(filelist):
+            fname = os.path.join(root, f)
+            text = _file2string(fname).encode('utf-8')
+            templ = template.Template(text, f.encode('utf-8'))
+            templs.append(templ)
+            sha1 = hashlib.sha1(text).hexdigest()
+            o.write("%d;%s;%s\n" % (k, sha1, f))
+    lastdir = os.getcwd()
 
     # Write each exam
     pdflist = ""
-    for n in xrange(num_exams):
-        exam_file = './tex/exam_%04d.tex' % n
-        pdflist += 'exam_%04d.pdf ' % n
-        generate_exam(n, config, templs, exam_file)
+    with open('exams.inf', 'w') as o:
+        for n in xrange(num_exams):
+            prefix = 'exam_%04d' % n
+            pdflist += prefix + '.pdf '
+            solutions, indices = generate_exam(n, config, templs, prefix)
+            o.write("%d;%s;%s\n" % (n, solutions, repr(indices)))
 
     # Write Makefile
     t = string.Template(Makefile_text)
@@ -453,4 +454,3 @@ def genexam(config_file,
 
 if __name__ == '__main__':
     opster.dispatch()
-
