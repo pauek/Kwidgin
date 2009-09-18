@@ -284,10 +284,10 @@ class LaTeXTranslator(nodes.NodeVisitor):
         self.output.append('\n\n')
 
     def visit_literal_block(self, node):
-        self.output.append('\\begin{Verbatim}\n')
+        self.output.append('\\vspace{-.4em}\n\\begin{Verbatim}\n')
 
     def depart_literal_block(self, node):
-        self.output.append('\\end{Verbatim}\n')
+        self.output.append('\n\\end{Verbatim}\n\\vspace{-.4em}')
 
     def visit_emphasis(self, node):
         self.output.append('\\emph{')
@@ -353,14 +353,16 @@ def generate_exam(permutation, config, templ_list, filename):
         out.write("\\Titol{%s}" % cfg['titol'])
         out.write("\\NumPreguntes{%d}\n" % len(templ_list))
         out.write("\\capsalera\n\n")
-        out.write("\\begin{multicols}{2}\n")
-        for t in templ_list:
+        out.write("\\begin{multicols*}{2}\n")
+        lst = copy(templ_list)
+        random.shuffle(lst)
+        for t in lst:
             print permutation, t.name
             rst = t.generate()
             latex = core.publish_string(rst, writer = LaTeXWriter(),
                                         settings_overrides = {'output_encoding': 'unicode'})
             out.write(latex)
-        out.write("\\end{multicols}\n")
+        out.write("\\end{multicols*}\n")
         out.write("\\end{document}\n")
 
 Makefile_text = """
@@ -389,13 +391,18 @@ def generate_exam_dir(config, output_dir, num_exams):
                                   f.encode('utf-8'))
         templs.append(templ)
     lastdir = os.getcwd()
-    # Create directory
+
+    # Create directories
     if not os.path.isdir(output_dir): os.mkdir(output_dir)
     os.chdir(output_dir)
     if not os.path.isdir('tex'): os.mkdir('tex')
-    # Write config (no puedo en UTF-8!!) TODO: Fix
+
+    # TODO: Fix this
+    #
+    # Write config (no puedo en UTF-8!!) 
     # with codecs.open('exam.cfg', 'w', 'utf-8') as cfgout:
     #   config.write(cfgout)
+
     # Write each exam
     pdflist = ""
     for n in xrange(num_exams):
