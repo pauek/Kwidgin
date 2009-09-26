@@ -446,7 +446,7 @@ def moodlexml(directory,
               base_category = ('b', Prefs.base_category, 
                                'Use this category to contain all others'),
               num_permutations = ('n', Prefs.num_permutations, 
-                                  'Number of permutation to use in question templates')):
+                                  'Number of permutations to generate for templates')):
     """Export a directory with RST and TRST files to the MoodleXML format"""
     Prefs.base_category = base_category
     Prefs.num_permutations = num_permutations
