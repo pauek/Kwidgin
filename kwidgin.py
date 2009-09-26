@@ -382,6 +382,19 @@ clean:
 \trm -f $${PDF} *.aux *.log enunciat.pdf
 """
 
+def explode_directories(root, filelist):
+    """ Substitute directories with all the files within them """
+    _filelist = []
+    for f in filelist:
+        rf = os.path.join(root, f)
+        if os.path.isdir(rf):
+            for _root, _, files in os.walk(rf):
+                for f in files:
+                    _filelist.append(os.path.join(_root, f))
+        else:
+            _filelist.append(rf)
+    return _filelist
+
 def generate_exam_dir(config, output_dir, num_exams):
     # Create directories
     if not os.path.isdir(output_dir): os.mkdir(output_dir)
@@ -392,11 +405,12 @@ def generate_exam_dir(config, output_dir, num_exams):
     templs = []
     root = config.get('preguntes', 'root')
     filelist = config.get('preguntes', 'list').split('\n')
+    filelist = explode_directories(root, filelist)
     with codecs.open('questions.inf', 'w', 'utf-8') as o:
         for k, f in enumerate(filelist):
-            fname = os.path.join(root, f)
+            fname = f.encode('utf-8')
             text = _file2string(fname).encode('utf-8')
-            templ = template.Template(text, f.encode('utf-8'))
+            templ = template.Template(text, fname)
             templs.append(templ)
             sha1 = hashlib.sha1(text).hexdigest()
             o.write("%d;%s;%s\n" % (k, sha1, f))
