@@ -187,10 +187,16 @@ class LaTeXTranslator(BaseTranslator):
         self.put('}')
 
     def visit_literal(self, node):
-        self.put('\\Verb|')
+        if '|' in node.astext():
+            self.put('\\Verb@')
+        else:
+            self.put('\\Verb|')
     
     def depart_literal(self, node):
-        self.put('|')
+        if '|' in node.astext():
+            self.put('@')
+        else:
+            self.put('|')
 
     def visit_answer(self, node):
         BaseTranslator.visit_answer(self, node)
@@ -390,7 +396,8 @@ def explode_directories(root, filelist):
         if os.path.isdir(rf):
             for _root, _, files in os.walk(rf):
                 for f in files:
-                    _filelist.append(os.path.join(_root, f))
+                    if (f[-1] != "~"):
+                        _filelist.append(os.path.join(_root, f))
         else:
             _filelist.append(rf)
     return _filelist
