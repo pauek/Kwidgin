@@ -8,6 +8,7 @@ from docutils import core, nodes, writers
 from docutils.parsers import rst
 from docutils.transforms import Transform
 from copy import copy
+from math import log, ceil
 
 ## Docutils nodes and directives
 
@@ -175,7 +176,7 @@ class LaTeXTranslator(BaseTranslator):
         self.put('\n\n')
 
     def visit_literal_block(self, node):
-        self.put('\\vspace{-.4em}\n\\begin{Verbatim}\n')
+        self.put('\\vspace{-.4em}\n\\begin{Verbatim}[commentchar=@]\n')
 
     def depart_literal_block(self, node):
         self.put('\n\\end{Verbatim}\n\\vspace{-.4em}')
@@ -287,10 +288,10 @@ def question_to_xml(out, q):
         out.write(u'</answer>')
     out.write(u'</question>')
 
-def category_to_xml(out, name):
+def category_to_xml(out, name, permut=''):
     out.write(u'<question type="category">')
-    out.write(u'<category><text>%s/%s</text></category>' 
-              % (Prefs.base_category, name.decode('utf-8')))
+    out.write(u'<category><text>%s/%s%s</text></category>' 
+              % (Prefs.base_category, name.decode('utf-8'), permut))
     out.write(u'</question>')
 
 def directory_to_xml(out, topdir):
@@ -301,14 +302,12 @@ def directory_to_xml(out, topdir):
         rel = os.path.relpath(root, topdir)
         for f in files:
             prefix, ext = os.path.splitext(f)
+            print os.path.join(rel, f)
             if ext == ".rst":
-                print os.path.join(rel, f)
                 rsts.append(os.path.join(root, f))
-                count += 1
             elif ext == '.trst':
-                print os.path.join(rel, f)
                 t_rsts.append(os.path.join(root, f))
-                count += 1
+            count += 1
                     
         if count > 0 and rel != ".":
             category_to_xml(out, rel)
@@ -319,13 +318,14 @@ def directory_to_xml(out, topdir):
         for t in t_rsts:
             path = os.path.relpath(t, topdir)
             prefix, _ = os.path.splitext(path)
-            category_to_xml(out, prefix)
+            category_to_xml(out, prefix, ' [PERMUT]')
             templ = template.Template(_file2string(t).encode('utf-8'), 
                                       os.path.basename(t))
             for i in xrange(Prefs.num_permutations):
                 text = templ.generate()
                 dic = core.publish_parts(text, writer = MoodleXMLWriter())
-                dic['title'] += u' (permutació %d)' % i
+                patt = ' [perm. %%0%dd]' % int(ceil(log(Prefs.num_permutations, 10)))
+                dic['title'] += patt % i
                 question_to_xml(out, dic)
     out.write(u'</quiz>')
 
