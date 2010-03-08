@@ -107,6 +107,9 @@ class BaseTranslator(nodes.NodeVisitor):
         self.parts['answers'].append(answ)
         self.scratch = []
         self.target = self.last
+
+    def visit_comment(self, node):
+        raise nodes.SkipNode
     
 class MoodleXMLTranslator(BaseTranslator):
 
