@@ -376,7 +376,7 @@ Makefile_text = """
 PDF=${pdflist}
 
 %.pdf: tex/%.tex
-\tlatex $$<  2> /dev/null > /dev/null
+\tpdflatex $$<  2> /dev/null > /dev/null
 
 enunciat.pdf: $${PDF}
 \tpdftk $${PDF} cat output enunciat.pdf
