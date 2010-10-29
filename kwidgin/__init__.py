@@ -426,6 +426,7 @@ def generate_exam_dir(config, output_dir, num_exams):
             o.write("%d;%s;%s\n" % (k, sha1, f))
     lastdir = os.getcwd()
 
+
     # Write each exam
     pdflist = ""
     with open('exams.inf', 'w') as o:
