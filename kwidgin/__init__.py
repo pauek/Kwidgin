@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os, codecs, os.path
+import os, sys, codecs, os.path
 import escape, template, random, string, hashlib
 import ConfigParser, cStringIO
 from docutils import core, nodes, writers
@@ -110,12 +110,21 @@ class BaseTranslator(nodes.NodeVisitor):
 
     def visit_comment(self, node):
         raise nodes.SkipNode
+
+    def unknown_visit(self, node):
+        print "WARNING: Visiting unknown node %s" % node.__class__.name
     
 class MoodleXMLTranslator(BaseTranslator):
+    def __init__(self, document):
+        BaseTranslator.__init__(self, document)
+        self.in_pre = False
 
     def visit_Text(self, node):
         txt = node.astext().encode('utf-8')
         esc = escape.xhtml_escape(txt)
+        if self.in_pre:
+            esc = string.replace(esc, ' ', '&nbsp;')
+            esc = string.replace(esc, '\n', '<br />')
         self.put(esc.decode('utf-8'))
 
     def depart_Text(self, node): pass
@@ -126,11 +135,25 @@ class MoodleXMLTranslator(BaseTranslator):
     def visit_paragraph(self, node):  self.put('<p>')
     def depart_paragraph(self, node): self.put('</p>')
 
+    def visit_system_message(self, node):
+        self.put('System Message {')
+
+    def depart_system_message(self, node):
+        self.put('}')
+
+    def visit_block_quote(self, node):
+        self.put('<blockquote>')
+
+    def depart_block_quote(self, node):
+        self.put('</blockquote>\n')
+
     def visit_literal_block(self, node):
+        self.in_pre = True
         style = 'font-family: monospace; font-size: 120%; margin-left: 1.6em'
-        self.put('<p style="%s">' % style)
+        self.put('<p style="' + style + '">')
 
     def depart_literal_block(self, node):
+        self.in_pre = False
         self.put('</p>')
 
     def visit_emphasis(self, node):  self.put('<em>')
@@ -149,6 +172,24 @@ class MoodleXMLTranslator(BaseTranslator):
         'lowerroman': 'lower-roman',
         'upperroman': 'upper-roman'
         }
+
+    def visit_term(self, node):
+        pass
+
+    def depart_term(self, node):
+        pass
+
+    def visit_definition_list(self, node):
+        self.put('<dl>')
+
+    def depart_definition_list(self, node):
+        self.put('</dl>')
+
+    def visit_definition_list_item(self, node):
+        pass
+
+    def depart_definition_list_item(self, node):
+        pass
 
     def visit_enumerated_list(self, node):
         typ = node['enumtype']
@@ -302,22 +343,29 @@ def directory_to_xml(out, topdir):
     for root, dirs, files in os.walk(topdir):
         count = 0
         t_rsts, rsts = [], []
-        rel = os.path.relpath(root, topdir)
+        relp = os.path.relpath(root, topdir)
+        absp = os.path.abspath(root)
         for f in files:
             prefix, ext = os.path.splitext(f)
-            print os.path.join(rel, f)
             if ext == ".rst":
-                rsts.append(os.path.join(root, f))
+                print os.path.join(relp, f)
+                rsts.append(os.path.join(absp, f))
             elif ext == '.trst':
-                t_rsts.append(os.path.join(root, f))
+                print os.path.join(relp, f)
+                t_rsts.append(os.path.join(absp, f))
             count += 1
                     
-        if count > 0 and rel != ".":
-            category_to_xml(out, rel)
+        if count > 0 and relp != ".":
+            category_to_xml(out, relp)
         for r in rsts:
             txt = _file2string(r)
-            dic = core.publish_parts(txt, writer = MoodleXMLWriter())
-            question_to_xml(out, dic)
+            try:
+                dic = core.publish_parts(txt, writer = MoodleXMLWriter())
+                question_to_xml(out, dic)
+            except Exception as e:
+                print txt
+                raise
+                
         for t in t_rsts:
             path = os.path.relpath(t, topdir)
             prefix, _ = os.path.splitext(path)
@@ -325,7 +373,11 @@ def directory_to_xml(out, topdir):
             templ = template.Template(_file2string(t).encode('utf-8'), 
                                       os.path.basename(t))
             for i in xrange(Prefs.num_permutations):
+                # Add to python path the directory of the template
+                sys.path.append(os.path.dirname(t))
                 text = templ.generate()
+                sys.path.pop()
+                #
                 dic = core.publish_parts(text, writer = MoodleXMLWriter())
                 patt = ' [perm. %%0%dd]' % int(ceil(log(Prefs.num_permutations, 10)))
                 dic['title'] += patt % i
@@ -360,7 +412,11 @@ def generate_exam(permutation, config, templ_list, basename):
         for i in indices:
             t = templ_list[i]
             print permutation, t.name
+            # Add to python path the directory of the template
+            sys.path.append(os.path.dirname(t.name))
             q = core.publish_parts(t.generate(), writer = LaTeXWriter())
+            sys.path.pop()
+            #
             o.write(q['question'])
             random.shuffle(q['answers'])
             for a in q['answers']: o.write(a[1])
@@ -399,8 +455,11 @@ def explode_directories(root, filelist):
         if os.path.isdir(rf):
             for _root, _, files in os.walk(rf):
                 for f in files:
-                    if (f[-1] != "~"):
+                    _, ext = os.path.splitext(f)
+                    if ext in ['.rst', '.trst']:
                         _filelist.append(os.path.join(_root, f))
+                    else:
+                        print "Ignoring file %s" % f
         else:
             _filelist.append(rf)
     return _filelist
