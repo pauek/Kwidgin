@@ -62,6 +62,14 @@ def integer_to_bitvector(n, length):
         n = q
     return v
 
+def bitvector_xor(vec1, vec2):
+    return [a != b for a, b in zip(vec1, vec2)]
+
+def bitvector_sample_xor(vec, num_samples):
+    nbits = len(vec)
+    S = bitvector_random_sample(nbits, num_samples, except_zero = True)
+    return [bitvector_xor(vec, v) for v in S]
+
 def bitvector_random_sample(num_bits, num_vectors, except_zero = False):
     N = 2**num_bits
     start = 0
