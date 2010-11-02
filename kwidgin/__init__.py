@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os, sys, codecs, os.path
-import escape, template, random, string, hashlib
+import escape, template, random, string, hashlib, re
 import ConfigParser, cStringIO
 from docutils import core, nodes, writers
 from docutils.parsers import rst
@@ -44,11 +44,16 @@ class AnswerDirective(rst.Directive):
         self.state.nested_parse(self.content, self.content_offset, node)
         return [node]
 
+class box(nodes.Inline, nodes.TextElement):
+    pass
+
 _reg = rst.directives.register_directive
 _reg('question', QuestionDirective)
 _reg('answer',   AnswerDirective)
 _reg('pregunta', QuestionDirective)
 _reg('resposta', AnswerDirective)
+_reg = rst.roles.register_generic_role
+_reg('box', box)
 
 ## Transforms
 
@@ -112,19 +117,14 @@ class BaseTranslator(nodes.NodeVisitor):
         raise nodes.SkipNode
 
     def unknown_visit(self, node):
-        print "WARNING: Visiting unknown node %s" % node.__class__.name
+        print "WARNING: Visiting unknown node %s" % node.__class__.__name__
+        raise nodes.SkipNode
     
 class MoodleXMLTranslator(BaseTranslator):
-    def __init__(self, document):
-        BaseTranslator.__init__(self, document)
-        self.in_pre = False
 
     def visit_Text(self, node):
         txt = node.astext().encode('utf-8')
         esc = escape.xhtml_escape(txt)
-        if self.in_pre:
-            esc = string.replace(esc, ' ', '&nbsp;')
-            esc = string.replace(esc, '\n', '<br />')
         self.put(esc.decode('utf-8'))
 
     def depart_Text(self, node): pass
@@ -148,13 +148,21 @@ class MoodleXMLTranslator(BaseTranslator):
         self.put('</blockquote>\n')
 
     def visit_literal_block(self, node):
-        self.in_pre = True
-        style = 'font-family: monospace; font-size: 120%; margin-left: 1.6em'
+        style  = 'font-family: monospace;'
+        style += 'font-size: 120%;'
+        style += 'margin-left: 1.6em'
         self.put('<p style="' + style + '">')
 
-    def depart_literal_block(self, node):
-        self.in_pre = False
+        text = node[0]
+        text = string.replace(text, ' ', '&nbsp;')
+        text = string.replace(text, '\n', '<br />')
+        style  = 'background: rgb(128, 128, 128);'
+        style += 'color: white'
+        patt = '<span style="' + style + '">&nbsp;\\1&nbsp;</span>'
+        text = re.sub(':box:`(.*)`', patt, text)
+        self.put(text)
         self.put('</p>')
+        raise nodes.SkipNode
 
     def visit_emphasis(self, node):  self.put('<em>')
     def depart_emphasis(self, node): self.put('</em>')
@@ -201,6 +209,16 @@ class MoodleXMLTranslator(BaseTranslator):
 
     def visit_list_item(self, node):  self.put('<li>')
     def depart_list_item(self, node): self.put('</li>')
+    
+    def visit_box(self, node):
+        style  = 'font-family: monospace;'
+        style += 'font-size: 120%;'
+        style += 'background: rgb(128, 128, 128);'
+        style += 'color: white'
+        self.put('<span style="%s">&nbsp;' % style)
+
+    def depart_box(self, node):
+        self.put('&nbsp;</span>')
 
 class LaTeXTranslator(BaseTranslator):
 
@@ -220,10 +238,15 @@ class LaTeXTranslator(BaseTranslator):
         self.put('\n\n')
 
     def visit_literal_block(self, node):
-        self.put('\\vspace{-.4em}\n\\begin{Verbatim}[commentchar=@]\n')
-
-    def depart_literal_block(self, node):
+        self.put('\\vspace{-.4em}\n\\begin{Verbatim}[commentchar=@, commandchars=\\\\\\#$]\n')
+        text = node[0]
+        text = re.sub(':box:`(.*)`', '\\wog# \\1 $', text)
+        self.put(text)
         self.put('\n\\end{Verbatim}\n\\vspace{-.4em}')
+        raise nodes.SkipNode
+
+    # def depart_literal_block(self, node):
+    #    self.put('\n\\end{Verbatim}\n\\vspace{-.4em}')
 
     def visit_emphasis(self, node):
         self.put('\\emph{')
@@ -276,6 +299,12 @@ class LaTeXTranslator(BaseTranslator):
         self.put('\item ')
 
     def depart_list_item(self, node): pass
+
+    def visit_box(self, node):
+        self.put('\\wog{\\Verb| ')
+
+    def depart_box(self, node):
+        self.put(' |}')
 
 ## Writers
 
