@@ -554,6 +554,7 @@ def generate_exam_dir(config, output_dir, num_exams):
 
 class Prefs:
     base_category = 'Kwidgin'
+    view_pdf_program = 'gv'
     num_permutations = 5
     show_answers = False
 
