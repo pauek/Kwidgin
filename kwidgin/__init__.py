@@ -159,7 +159,7 @@ class MoodleXMLTranslator(BaseTranslator):
         text = string.replace(text, '\n', '<br />')
         style  = 'background: rgb(128, 128, 128);'
         style += 'color: white'
-        patt = '<span style="' + style + '">&nbsp;\\1&nbsp;</span>'
+        patt = '<span style="' + style + '">\\1</span>'
         text = re.sub(':box:`([^`]*)`', patt, text)
         self.put(text)
         self.put('</p>')
@@ -211,24 +211,25 @@ class MoodleXMLTranslator(BaseTranslator):
     def visit_list_item(self, node):  self.put('<li>')
     def depart_list_item(self, node): self.put('</li>')
     
+    common_style = [
+        'font-family: monospace',
+        'font-size: 120%',
+        'padding: .1em .3em'
+        ]
+
     def visit_box(self, node):
-        style  = 'font-family: monospace;'
-        style += 'font-size: 120%;'
-        style += 'background: rgb(128, 128, 128);'
-        style += 'padding: .1em .3em;'
-        style += 'color: white'
-        self.put('<span style="%s">' % style)
+        style = copy(self.common_style)
+        style += ['background: rgb(128, 128, 128)']
+        style += ['color: white']
+        self.put('<span style="%s">' % '; '.join(style))
 
     def depart_box(self, node):
         self.put('</span>')
 
     def visit_frame(self, node):
-        style  = 'font-family: monospace;'
-        style += 'font-size: 120%;'
-        style += 'border: 1px solid black;'
-        style += 'padding: .1em .3em;'
-        style += 'color: white'
-        self.put('<span style="%s">' % style)
+        style = copy(self.common_style)
+        style += ['border: 1px solid black']
+        self.put('<span style="%s">' % '; '.join(style))
 
     def depart_frame(self, node):
         self.put('</span>')
@@ -272,7 +273,10 @@ class LaTeXTranslator(BaseTranslator):
         delim = '|'
         if '|' in node.astext(): delim = '@'
         self.put('\\Verb' + delim)
-        self.put(node.astext().replace('_', '\\_'))
+        text = node.astext()
+        text = text.replace('&', '\\&')
+        text = text.replace('_', '\\_')
+        self.put(text)
         self.put(delim)
 
     def visit_literal(self, node):
@@ -554,7 +558,7 @@ def generate_exam_dir(config, output_dir, num_exams):
 
 class Prefs:
     base_category = 'Kwidgin'
-    view_pdf_program = 'gv'
+    view_pdf_program = 'gnome-open'
     num_permutations = 5
     show_answers = False
 
