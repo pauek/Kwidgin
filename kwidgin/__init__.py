@@ -44,8 +44,8 @@ class AnswerDirective(rst.Directive):
         self.state.nested_parse(self.content, self.content_offset, node)
         return [node]
 
-class box(nodes.Inline, nodes.TextElement):
-    pass
+class box(nodes.Inline, nodes.TextElement): pass
+class frame(nodes.Inline, nodes.TextElement): pass
 
 _reg = rst.directives.register_directive
 _reg('question', QuestionDirective)
@@ -54,6 +54,7 @@ _reg('pregunta', QuestionDirective)
 _reg('resposta', AnswerDirective)
 _reg = rst.roles.register_generic_role
 _reg('box', box)
+_reg('frame', frame)
 
 ## Transforms
 
@@ -159,7 +160,7 @@ class MoodleXMLTranslator(BaseTranslator):
         style  = 'background: rgb(128, 128, 128);'
         style += 'color: white'
         patt = '<span style="' + style + '">&nbsp;\\1&nbsp;</span>'
-        text = re.sub(':box:`(.*)`', patt, text)
+        text = re.sub(':box:`([^`]*)`', patt, text)
         self.put(text)
         self.put('</p>')
         raise nodes.SkipNode
@@ -214,11 +215,24 @@ class MoodleXMLTranslator(BaseTranslator):
         style  = 'font-family: monospace;'
         style += 'font-size: 120%;'
         style += 'background: rgb(128, 128, 128);'
+        style += 'padding: .1em .3em;'
         style += 'color: white'
-        self.put('<span style="%s">&nbsp;' % style)
+        self.put('<span style="%s">' % style)
 
     def depart_box(self, node):
-        self.put('&nbsp;</span>')
+        self.put('</span>')
+
+    def visit_frame(self, node):
+        style  = 'font-family: monospace;'
+        style += 'font-size: 120%;'
+        style += 'border: 1px solid black;'
+        style += 'padding: .1em .3em;'
+        style += 'color: white'
+        self.put('<span style="%s">' % style)
+
+    def depart_frame(self, node):
+        self.put('</span>')
+
 
 class LaTeXTranslator(BaseTranslator):
 
@@ -240,7 +254,7 @@ class LaTeXTranslator(BaseTranslator):
     def visit_literal_block(self, node):
         self.put('\\vspace{-.4em}\n\\begin{Verbatim}[commentchar=@, commandchars=\\\\\\#$]\n')
         text = node[0]
-        text = re.sub(':box:`(.*)`', '\\wog# \\1 $', text)
+        text = re.sub(':box:`([^`]*)`', '\\wog#\\1$', text)
         self.put(text)
         self.put('\n\\end{Verbatim}\n\\vspace{-.4em}')
         raise nodes.SkipNode
@@ -254,17 +268,16 @@ class LaTeXTranslator(BaseTranslator):
     def depart_emphasis(self, node):
         self.put('}')
 
+    def print_literal(self, node):
+        delim = '|'
+        if '|' in node.astext(): delim = '@'
+        self.put('\\Verb' + delim)
+        self.put(node.astext().replace('_', '\\_'))
+        self.put(delim)
+
     def visit_literal(self, node):
-        if '|' in node.astext():
-            self.put('\\Verb@')
-        else:
-            self.put('\\Verb|')
-    
-    def depart_literal(self, node):
-        if '|' in node.astext():
-            self.put('@')
-        else:
-            self.put('|')
+        self.print_literal(node)
+        raise nodes.SkipNode
 
     def visit_answer(self, node):
         BaseTranslator.visit_answer(self, node)
@@ -301,10 +314,16 @@ class LaTeXTranslator(BaseTranslator):
     def depart_list_item(self, node): pass
 
     def visit_box(self, node):
-        self.put('\\wog{\\Verb| ')
+        self.put('\\wog{')
+        self.print_literal(node[0])
+        self.put('}')
+        raise nodes.SkipNode
 
-    def depart_box(self, node):
-        self.put(' |}')
+    def visit_frame(self, node):
+        self.put('\\wox{')
+        self.print_literal(node[0])
+        self.put('}')
+        raise nodes.SkipNode
 
 ## Writers
 
@@ -461,7 +480,7 @@ Makefile_text = """
 PDF=${pdflist}
 
 %.pdf: tex/%.tex
-\tpdflatex $$<  2> /dev/null > /dev/null
+\tpdflatex -halt-on-error $$<  2> /dev/null > /dev/null
 
 enunciat.pdf: $${PDF}
 \tpdftk $${PDF} cat output enunciat.pdf
@@ -494,6 +513,8 @@ def explode_directories(root, filelist):
     return _filelist
 
 def generate_exam_dir(config, output_dir, num_exams):
+    lastdir = os.getcwd()
+
     # Create directories
     if not os.path.isdir(output_dir): os.mkdir(output_dir)
     os.chdir(output_dir)
@@ -512,7 +533,6 @@ def generate_exam_dir(config, output_dir, num_exams):
             templs.append(templ)
             sha1 = hashlib.sha1(text).hexdigest()
             o.write("%d;%s;%s\n" % (k, sha1, f))
-    lastdir = os.getcwd()
 
 
     # Write each exam
@@ -529,6 +549,7 @@ def generate_exam_dir(config, output_dir, num_exams):
     with open('Makefile', 'w') as o:
         o.write(t.substitute(pdflist=pdflist))
 
+    print "Changing to " + lastdir
     os.chdir(lastdir)
 
 class Prefs:
