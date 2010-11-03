@@ -158,6 +158,7 @@ class MoodleXMLTranslator(BaseTranslator):
         text = string.replace(text, ' ', '&nbsp;')
         text = string.replace(text, '\n', '<br />')
         style  = 'background: rgb(128, 128, 128);'
+        style += 'padding: .1em .3em;'
         style += 'color: white'
         patt = '<span style="' + style + '">\\1</span>'
         text = re.sub(':box:`([^`]*)`', patt, text)
