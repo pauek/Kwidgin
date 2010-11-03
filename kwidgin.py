@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import kwidgin, codecs, opster, ConfigParser
+import kwidgin, codecs, opster, ConfigParser, os
 from kwidgin import Prefs
 
 @opster.command(usage = '[options...] directory output_file')
@@ -21,7 +21,9 @@ def moodlexml(directory,
 def genexam(config_file,
             output_dir,
             num_exams=('n', 10, 'Number of exams to generate'),
-            show_answers=('s', False, 'Show answers in output')):
+            show_answers=('s', False, 'Show answers in output'),
+            run_latex=('r', False, 'Call LaTeX to produce the PDF'),
+            view_pdf=('v', False, 'Run LaTeX and show the PDF')):
     """Generate an exam as a directory with LaTeX files"""
     
     config = ConfigParser.RawConfigParser()
@@ -29,6 +31,17 @@ def genexam(config_file,
         config.readfp(infile)
     Prefs.show_answers = show_answers
     kwidgin.generate_exam_dir(config, output_dir, num_exams)
+    if run_latex or view_pdf:
+        print "Running LaTeX..."
+        absdir = os.path.abspath(output_dir)
+        print absdir
+        ret = os.system("make -j8 -C " + output_dir)
+        if ret == 0:
+            print "Success!"
+            if view_pdf:
+                os.system("evince " + output_dir + "/enunciat.pdf")
+        else:
+            print "Something went wrong"
 
 if __name__ == '__main__':
     opster.dispatch()
