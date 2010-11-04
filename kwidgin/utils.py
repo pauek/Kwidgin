@@ -70,6 +70,10 @@ def bitvector_sample_xor(vec, num_samples):
     S = bitvector_random_sample(nbits, num_samples, except_zero = True)
     return [bitvector_xor(vec, v) for v in S]
 
+def all_bitvectors(num_bits):
+    N = 2**num_bits
+    return [integer_to_bitvector(k, num_bits) for k in range(0, N)]
+
 def bitvector_random_sample(num_bits, num_vectors, except_zero = False):
     N = 2**num_bits
     start = 0
