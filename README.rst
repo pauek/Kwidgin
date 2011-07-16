@@ -32,7 +32,7 @@ You have to write a "config file" for an exam::
           Equivalencia.trst
           Expressio Booleana.trst
 
-This file is included in the ``trst`` directory as ``config``
+This file is included in the ``demo-questions`` directory as ``config``
 
 Then, from the distribution directory, you can run::
 
@@ -40,11 +40,12 @@ Then, from the distribution directory, you can run::
 
 To see the options or if you can't wait::
 
-  ./kwidgin.py genexam -n 10 -s -v trst/config exam
+  ./kwidgin.py genexam -n 10 -s -v demo-questions/config exam
 
-This will generate 10 exams, using ``trst/config``, will show the
-right answers and will pop Evince to show you the PDF. Files will be
-written in the ``exam`` directory.
+This will generate 10 exams (``-n 10``) using
+``demo-questions/config``, will show a black mark for the right
+answers (``-s``) and will pop Evince to show you the PDF
+(``-v``). Files will be written in the ``exam`` directory.
 
 Some LaTeX classes are needed that are not included here, I will add
 them at some point.
