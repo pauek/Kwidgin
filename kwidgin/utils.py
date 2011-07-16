@@ -81,6 +81,15 @@ def bitvector_random_sample(num_bits, num_vectors, except_zero = False):
     return [integer_to_bitvector(k, num_bits) 
             for k in random.sample(range(start, N), num_vectors)]
 
+def vector_to_text(vec, last_separator = ' i '):
+    svec = [str(i) for i in vec]
+    if len(svec) == 0:
+        return "buit"
+    elif len(svec) == 1:
+        return svec[0]
+    else:
+        return ', '.join(svec[:-1]) + last_separator + svec[-1]
+
 def bitvector_to_text(vec, all_of_them):
     num_true = count_true(vec)
     if num_true == len(vec):
