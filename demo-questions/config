@@ -1,0 +1,11 @@
+[exàmen]
+assignatura = Fonaments d'Informàtica
+especialitat = Grau Audiovisuals
+temps = 10m
+titol = Examen Part I
+
+[preguntes]
+root = ../trst
+list = Divisio entera i modul.trst
+       Equivalencia.trst
+       Expressio Booleana.trst

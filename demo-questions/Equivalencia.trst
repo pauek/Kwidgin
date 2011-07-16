@@ -1,0 +1,73 @@
+{% 
+
+import random
+
+def random_mapping(lst):
+    ord = list(lst)
+    random.shuffle(ord)
+    iord = dict([(ord[i], i) for i in range(len(ord))])
+    return ord, iord
+
+ll = tuple(random.sample('abcdefghijklmnopqrstuvwxyz', 2))
+
+opcio = {
+  'c1': "cout << '%s' << endl << '%s' << endl;" % ll,
+  'c2': "cout << '%s'; cout << '%s';" % ll,
+
+  #
+  # >> IMPORTANTE <<
+  # La indentación del siguiente string cuadra con las opciones abajo
+  #
+  'c3': 
+      """cout << '%s' << endl;
+         cout << '%s' << endl;""" % ll,
+
+  'c4': "cout << '%s' << endl << '%s';" % ll,
+}
+
+ord, iord = random_mapping(['c1', 'c2', 'c3', 'c4'])
+lletra = ['A', 'B', 'C', 'D']
+
+%}
+
+.. objectius = 1.2.1
+
+.. title:: Entendre què fa endl
+
+.. question::
+   
+   Donats els següents grups d'instruccions:
+
+   A::
+        
+         {{ opcio[ord[0]] }}
+
+   B:: 
+   
+         {{ opcio[ord[1]] }}
+
+   C:: 
+   
+         {{ opcio[ord[2]] }}
+
+   D::
+   
+         {{ opcio[ord[3]] }}
+
+   Indica quines són equivalents (produeixen la mateixa sortida):
+
+.. answer:: false
+   
+   {{ lletra[iord['c2']] }} i {{ lletra[iord['c4']] }}.
+
+.. answer:: false
+
+   {{ lletra[iord['c1']] }} i {{ lletra[iord['c2']] }}.
+
+.. answer:: false
+   
+   {{ lletra[iord['c2']] }} i {{ lletra[iord['c3']] }}.
+
+.. answer:: true
+   
+   {{ lletra[iord['c1']] }} i {{ lletra[iord['c3']] }}.

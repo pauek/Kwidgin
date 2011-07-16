@@ -1,0 +1,86 @@
+{%
+
+import random
+
+def coin(n):
+    return [random.choice([False, True]) for i in xrange(n)]
+
+p, q, r = tuple(coin(3))
+
+_expr1 = [
+  ("p && (q || r)",    lambda p, q, r: p and (q or r)),
+  ("p && (q || !r)",   lambda p, q, r: p and (q or not r)),
+  ("p && (!q || r)",   lambda p, q, r: p and (not q or r)),
+  ("!p && (q || r)",   lambda p, q, r: not p and (q or r)),
+  ("p && !(q || r)",   lambda p, q, r: p and not (q or r)),
+  ("!(p && (q || r))", lambda p, q, r: not (p and (q or r))),
+
+  ("p || q && r",      lambda p, q, r: p or (q and r)),  
+  ("!p || q && r",     lambda p, q, r: not p or (q and r)),  
+  ("p || !q && r",     lambda p, q, r: p or (not q and r)),  
+  ("p || q && !r",     lambda p, q, r: p or (q and not r)),  
+  ("p || !(q && r)",   lambda p, q, r: p or not (q and r)),  
+  ("!(p || q && r)",   lambda p, q, r: not (p or (q and r))),
+]
+
+_expr2 = [
+  ("p && q || r",      lambda p, q, r: (p and q) or r),
+  ("!p && q || r",     lambda p, q, r: (not p and q) or r),
+  ("p && !q || r",     lambda p, q, r: (p and not q) or r),
+  ("p && q || !r",     lambda p, q, r: (p and q) or not r),
+  ("!(p && q) || r",   lambda p, q, r: not (p and q) or r),
+  ("!(p && q || r)",   lambda p, q, r: not ((p and q) or r)),
+
+  ("(p || q) && r",    lambda p, q, r: (p or q) and r),
+  ("(!p || q) && r",   lambda p, q, r: (not p or q) and r),
+  ("(p || !q) && r",   lambda p, q, r: (p or not q) and r),
+  ("(p || q) && !r",   lambda p, q, r: (p or q) and not r),
+  ("!(p || q) && r",   lambda p, q, r: not (p or q) and r),
+  ("!((p || q) && r)", lambda p, q, r: not ((p or q) and r)),
+]
+
+e1 = random.choice(_expr1)
+e2 = random.choice(_expr2)
+ans = [['false', 'true'][b == (e1[1](p, q, r), e2[1](p, q, r))]
+       for b in [(False, False), (False, True), (True, False), (True, True)]]
+
+print ans
+
+def text(b):
+    return ['false', 'true'][b]
+
+%}
+
+.. objectius = 1.4.4
+
+.. title:: Expressió Booleana qualsevol
+
+.. question::
+
+   Donades les següents declaracions::
+
+      bool p = {{ text(p) }}, q = {{ text(q) }}, r = {{ text(r) }};
+
+   les dues expressions següents::
+
+      {{ e1[0] }}
+      {{ e2[0] }}
+
+   avaluen, respectivament, a
+
+.. answer:: {{ ans[0] }}
+   
+   ``false`` i ``false``.
+
+.. answer:: {{ ans[1] }}
+   
+   ``false`` i ``true``.
+
+.. answer:: {{ ans[2] }}
+   
+   ``true`` i ``false``.
+
+.. answer:: {{ ans[3] }}
+   
+   ``true`` i ``true``.
+
