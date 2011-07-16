@@ -27,7 +27,7 @@ You have to write a "config file" for an exam::
    titol = Examen Part I
 
    [preguntes]
-   root = ../trst
+   root = ../demo-questions
    list = Divisio entera i modul.trst
           Equivalencia.trst
           Expressio Booleana.trst

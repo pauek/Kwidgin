@@ -5,7 +5,7 @@ temps = 10m
 titol = Examen Part I
 
 [preguntes]
-root = ../trst
+root = ../demo-questions
 list = Divisio entera i modul.trst
        Equivalencia.trst
        Expressio Booleana.trst
