@@ -1,4 +1,3 @@
-
 Kwidgin
 -------
 
@@ -48,4 +47,4 @@ answers (``-s``) and will pop Evince to show you the PDF
 (``-v``). Files will be written in the ``exam`` directory.
 
 Some LaTeX classes are needed that are not included here, I will add
-them at some point.
+them eventually.
