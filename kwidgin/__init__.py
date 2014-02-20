@@ -235,6 +235,52 @@ class MoodleXMLTranslator(BaseTranslator):
     def depart_frame(self, node):
         self.put('</span>')
 
+class HtmlTranslator(MoodleXMLTranslator):
+    def visit_literal_block(self, node):
+        self.put('<pre>')
+        text = node[0]
+        text = string.replace(text, ' ', '&nbsp;')
+        text = string.replace(text, '\n', '<br />')
+        patt = '<span class="box">\\1</span>'
+        text = re.sub(':box:`([^`]*)`', patt, text)
+        self.put(text)
+        self.put('</pre>')
+        raise nodes.SkipNode
+
+    def visit_literal(self, node):
+        self.put('<tt>')
+    
+    def depart_literal(self, node):
+        self.put('</tt>')
+
+    enumerated_style = {
+        'arabic': 'decimal',
+        'loweralpha': 'lower-alpha',
+        'upperalpha': 'upper-alpha',
+        'lowerroman': 'lower-roman',
+        'upperroman': 'upper-roman'
+        }
+
+    def visit_enumerated_list(self, node):
+        typ = node['enumtype']
+        self.put(u'<ol style="list-style-type: %s">' 
+                           % self.enumerated_style[typ])
+
+    def depart_enumerated_list(self, node):
+        self.put(u'</ol>')
+
+    def visit_box(self, node):
+        self.put('<span class="box">')
+
+    def depart_box(self, node):
+        self.put('</span>')
+
+    def visit_frame(self, node):
+        self.put('<span class="frame">')
+
+    def depart_frame(self, node):
+        self.put('</span>')
+
 
 class LaTeXTranslator(BaseTranslator):
 
@@ -356,6 +402,10 @@ class MoodleXMLWriter(QuestionWriter):
     translator_class = MoodleXMLTranslator
     transforms = [FlattenAnswers]
 
+class HtmlWriter(QuestionWriter):
+    translator_class = HtmlTranslator
+    transforms = [FlattenAnswers]
+
 class LaTeXWriter(QuestionWriter):
     translator_class = LaTeXTranslator
     transforms = [ShuffleAnswers, FlattenAnswers]
@@ -438,6 +488,16 @@ def directory_to_xml(out, topdir):
     out.write(u'</quiz>')
 
 ## Genexam (LaTeX publisher)
+
+def render(text, writer):
+    w = None
+    if writer == "latex":
+        w = LaTeXWriter()
+    elif writer == "moodlexml":
+        w = MoodleXMLWriter()
+    elif writer == "html":
+        w = HtmlWriter()
+    return core.publish_parts(text, writer = w)
 
 def generate_exam(permutation, config, templ_list, basename):
     cfg = {}

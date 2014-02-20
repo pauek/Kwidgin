@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import kwidgin, codecs, opster, ConfigParser, os
-from kwidgin import Prefs
+import kwidgin, codecs, opster, ConfigParser, os, sys, random
+from kwidgin import Prefs, template
 
 @opster.command(usage = '[options...] directory output_file')
 def moodlexml(directory,
@@ -43,6 +43,37 @@ def genexam(config_file,
                 os.system(viewer + " " + output_dir + "/enunciat.pdf")
         else:
             print "Something went wrong"
+
+@opster.command(usage = '[options...] question_file')
+def gen(question_file,
+        output_file=('o', '-', 'Output file'),
+        seed=('s', 0, 'Seed')):
+    """Generate a question from a template file"""
+    if seed != 0:
+        random.seed(seed)
+    with codecs.open(question_file, 'r', 'utf-8') as f:
+        question_text = f.read().encode('utf-8')
+        t = template.Template(question_text, question_file)
+        out = sys.stdout
+        if output_file != '-':
+            out = open(output_file, 'w')
+        sys.path.append(os.path.dirname(question_file))
+        out.write(t.generate())
+        sys.path.pop()
+
+@opster.command(usage = '[options...] rst_file')
+def render(rst_file,
+           output_file=('o', '-', 'Output file'),
+           format=('f','latex','Format (one of "latex", "html", "moodlexml")')):
+    with codecs.open(rst_file, 'r', 'utf-8') as f:
+        rst_text = f.read().encode('utf-8')
+        q = kwidgin.render(rst_text, format)
+        out = sys.stdout
+        if output_file != '-':
+            out = open(output_file, 'w')
+        out.write(q['question'].encode('utf-8'))
+        for ch, answer in zip("abcdefghij", q['answers']):
+            out.write('<input type="radio" name="answer" value="' + ch + '" />' + answer[1] + '<br />')
 
 if __name__ == '__main__':
     opster.dispatch()
