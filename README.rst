@@ -5,7 +5,7 @@ Strange name, yeah. It comes from QuizGen, which is impossible to
 pronounce. QuizGen: Quiz Generator. With this thing you can write
 programs that generate questions, put a lot of them together, and have
 them permuted in such a way that it is safe to have students take the
-quiz even if they can read each others exam. Pretty useful, huh?
+quiz even if they can read each others exam.
 
 I will admit (if you press hard enough) that this software not yet
 ready for prime time...
