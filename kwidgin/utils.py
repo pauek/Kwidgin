@@ -90,28 +90,30 @@ def vector_to_text(vec, last_separator = ' i '):
     else:
         return ', '.join(svec[:-1]) + last_separator + svec[-1]
 
-def bitvector_to_text(vec, all_of_them):
+def bitvector_to_text(vec, gender):
+    s_all = "Todos" if gender == "masc" else "Todas"
+    s_none = "Ninguno" if gender == "masc" else "Ninguna"
     num_true = count_true(vec)
     if num_true == len(vec):
-        return all_of_them
+        return s_all
     elif num_true == 0:
-        return "Cap"
+        return s_none
     else:
         good = [letters[i] for i in range(len(vec)) if vec[i]]
         if len(good) == 1:
-            return u'Només %s' % good[0]
+            return u'Sólo %s' % good[0]
         else:
-            return ', '.join(good[:-1]) + ' i ' + good[-1]
+            return ', '.join(good[:-1]) + ' y ' + good[-1]
 
 class Struct:
    def __init__(self, **entries): 
       self.__dict__.update(entries)
 
 class BinaryChoiceGenerator(object):
-    def __init__(self, num_options, num_answers, all_of_them = "Tots"):
+    def __init__(self, num_options, num_answers, gender = "masc"):
         self.noptions = num_options
         self.nanswers = num_answers
-        self.all = all_of_them
+        self.gender = gender
 
     def generate_one(self, truth_value):
         assert false
@@ -123,7 +125,8 @@ class BinaryChoiceGenerator(object):
         # Assume first vector is the correct one
         V = bitvector_random_sample(self.noptions, self.nanswers)
         correct_options = V[0]
-        self.answers = [Struct(truth = 'false', text = bitvector_to_text(x, self.all)) 
+        self.answers = [Struct(truth = 'false', 
+                               text = bitvector_to_text(x, self.gender))
                         for x in V]
         self.answers[0].truth = 'true'
         self.options = [Struct(letter = c, text = t)

@@ -51,29 +51,47 @@ def gen(question_file,
     """Generate a question from a template file"""
     if seed != 0:
         random.seed(seed)
-    with codecs.open(question_file, 'r', 'utf-8') as f:
-        question_text = f.read().encode('utf-8')
-        t = template.Template(question_text, question_file)
-        out = sys.stdout
-        if output_file != '-':
-            out = open(output_file, 'w')
-        sys.path.append(os.path.dirname(question_file))
-        out.write(t.generate())
-        sys.path.pop()
+    infile = sys.stdin
+    if question_file != "-":
+        infile = open(question_file, 'r')
+    question_text = infile.read()
+    t = template.Template(question_text, question_file)
+    outfile = sys.stdout
+    if output_file != '-':
+        outfile = open(output_file, 'w')
+    sys.path.append(os.path.dirname(question_file))
+    outfile.write(t.generate())
+    sys.path.pop()
+    infile.close()
+    outfile.close()
 
 @opster.command(usage = '[options...] rst_file')
-def render(rst_file,
-           output_file=('o', '-', 'Output file'),
-           format=('f','latex','Format (one of "latex", "html", "moodlexml")')):
-    with codecs.open(rst_file, 'r', 'utf-8') as f:
-        rst_text = f.read().encode('utf-8')
-        q = kwidgin.render(rst_text, format)
-        out = sys.stdout
-        if output_file != '-':
-            out = open(output_file, 'w')
-        out.write(q['question'].encode('utf-8'))
-        for ch, answer in zip("abcdefghij", q['answers']):
-            out.write('<input type="radio" name="answer" value="' + ch + '" />' + answer[1] + '<br />')
+def json(rst_file,
+         output_file=('o', '-', 'Output file')):
+    infile = sys.stdin
+    if rst_file != '-':
+        infile = open(rst_file, 'r') 
+        
+    rst_text = infile.read()
+    q = kwidgin.render(rst_text, "html")
+    random.shuffle(q['answers'])
+
+    outfile = sys.stdout
+    if output_file != '-':
+        outfile = open(output_file, 'w')
+
+    solutions = ''
+    for ch, answer in zip("abcdefghij", q['answers']):
+        solutions += ch if answer[0] else ''
+
+    import json
+    outfile.write(json.dumps({
+       'Question': q['question'].encode('utf-8'),
+       'Answers': [a[1] for a in q['answers']],
+       'Solution': solutions,
+    }))
+    outfile.close()
+    infile.close()
 
 if __name__ == '__main__':
     opster.dispatch()

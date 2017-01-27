@@ -261,25 +261,17 @@ class HtmlTranslator(MoodleXMLTranslator):
         'upperroman': 'upper-roman'
         }
 
-    def visit_enumerated_list(self, node):
-        typ = node['enumtype']
-        self.put(u'<ol style="list-style-type: %s">' 
-                           % self.enumerated_style[typ])
-
-    def depart_enumerated_list(self, node):
-        self.put(u'</ol>')
-
     def visit_box(self, node):
-        self.put('<span class="box">')
+        self.put(u'<span class="box">')
 
     def depart_box(self, node):
-        self.put('</span>')
+        self.put(u'</span>')
 
     def visit_frame(self, node):
-        self.put('<span class="frame">')
+        self.put(u'<span class="frame">')
 
     def depart_frame(self, node):
-        self.put('</span>')
+        self.put(u'</span>')
 
 
 class LaTeXTranslator(BaseTranslator):
