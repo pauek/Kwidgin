@@ -504,7 +504,8 @@ def generate_exam(permutation, config, templ_list, basename):
         solucio = ""
         if Prefs.show_answers:
             solucio = "-solucio"
-        o.write("\\documentclass{test-fi%s}\n\n" % solucio)
+        # o.write("\\documentclass{test-fi%s}\n\n" % solucio)
+        o.write("\\documentclass{local}\n\n")
         o.write("\\begin{document}")
         o.write("\\Permutacio{%d}" % permutation)
         o.write("\\Assignatura{%s}" % cfg['assignatura'])
@@ -518,7 +519,7 @@ def generate_exam(permutation, config, templ_list, basename):
             t = templ_list[i]
             while isinstance(t, list):
                t = random.choice(t)
-            print permutation, t.name
+            # print permutation, t.name
             # Add to python path the directory of the template
             sys.path.append(os.path.dirname(t.name))
             q = core.publish_parts(t.generate(), writer = LaTeXWriter())
@@ -529,7 +530,7 @@ def generate_exam(permutation, config, templ_list, basename):
             for a in q['answers']: o.write(a[1])
             t_or_f = [a[0] for a in q['answers']]
             solutions += ['a', 'b', 'c', 'd', 'e', 'f'][t_or_f.index(True)]
-        print solutions
+        # print solutions
         o.write("\\end{multicols*}\n")
         o.write("\\end{document}\n")
 
@@ -538,20 +539,39 @@ def generate_exam(permutation, config, templ_list, basename):
 Makefile_text = """
 PDF=${pdflist}
 
-%.pdf: tex/%.tex
-\tpdflatex -halt-on-error $$<  2> /dev/null > /dev/null
+all: enunciat.pdf
 
 enunciat.pdf: $${PDF}
 \tpdftk $${PDF} cat output enunciat.pdf
-\trm -f $${PDF} *.aux *.log
+\trm -f $${PDF} *.aux *.log local.cls
 
-all: enunciat.pdf
+%.pdf: tex/%.tex local.cls
+\t@echo $$<
+\t@pdflatex -halt-on-error $$< 2> /dev/null > /dev/null
+
+local.cls:
+ifdef SOLUTIONS
+\t@echo Showing SOLUTIONS
+\t@ln -s solution.cls local.cls
+else
+\t@ln -s normal.cls local.cls
+endif
 
 view: all
 \tgnome-open enunciat.pdf
 
 clean:
 \trm -f $${PDF} *.aux *.log enunciat.pdf
+"""
+
+Classfile_text = """\NeedsTeXFormat{LaTeX2e}[1995/12/01]
+\ProvidesClass{local}
+\LoadClass{test-fi}
+"""
+
+Classfile_solucio_text = """\NeedsTeXFormat{LaTeX2e}[1995/12/01]
+\ProvidesClass{local}
+\LoadClass{test-fi-solucio}
 """
 
 def get_template_tree(question_list):
@@ -600,8 +620,8 @@ def generate_exam_dir(config, output_dir, num_exams):
     question_list = [os.path.join(root, f) for f in config.get('preguntes', 'list').split('\n')]
     file_tree = get_template_tree(question_list)
 
-    print_tree(file_tree)
-    print
+    # print_tree(file_tree)
+    # print
 
     # with codecs.open('questions.inf', 'w', 'utf-8') as o:
     # for k, f in enumerate(file_tree):
@@ -612,7 +632,7 @@ def generate_exam_dir(config, output_dir, num_exams):
 
     # Write each exam
     pdflist = ""
-    with open('exams.inf', 'w') as o:
+    with open('solution.inf', 'w') as o:
         for n in xrange(num_exams):
             prefix = 'exam_%04d' % n
             pdflist += prefix + '.pdf '
@@ -623,6 +643,12 @@ def generate_exam_dir(config, output_dir, num_exams):
     t = string.Template(Makefile_text)
     with open('Makefile', 'w') as o:
         o.write(t.substitute(pdflist=pdflist))
+
+    with open('normal.cls', 'w') as o:
+        o.write(Classfile_text)
+
+    with open('solution.cls', 'w') as o:
+        o.write(Classfile_solucio_text)
 
     print "Changing to " + lastdir
     os.chdir(lastdir)
