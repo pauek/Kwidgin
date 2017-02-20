@@ -559,12 +559,14 @@ def explode_directories(root, filelist):
         rf = os.path.join(root, f)
         if os.path.isdir(rf):
             for _root, _, files in os.walk(rf):
+                candidates = []
                 for f in files:
                     _, ext = os.path.splitext(f)
                     if ext in ['.rst', '.trst']:
-                        _filelist.append(os.path.join(_root, f))
+                        candidates.append(os.path.join(_root, f))
                     else:
                         print "Ignoring file %s" % f
+                _filelist.append(random.choice(candidates))
         else:
             _filelist.append(rf)
     return _filelist
