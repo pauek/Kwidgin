@@ -502,9 +502,7 @@ def generate_exam(permutation, config, templ_list, basename):
     with codecs.open('tex/' + basename + '.tex', 'w', 'utf-8') as o:
         o.write("%%%% Permutacio: %d\n" % permutation)
         solucio = ""
-        if Prefs.show_answers:
-            solucio = "-solucio"
-        o.write("\\documentclass{test-fi%s}\n\n" % solucio)
+        o.write("\\documentclass{local}\n\n")
         o.write("\\begin{document}")
         o.write("\\Permutacio{%d}" % permutation)
         o.write("\\Assignatura{%s}" % cfg['assignatura'])
@@ -516,7 +514,9 @@ def generate_exam(permutation, config, templ_list, basename):
         o.write("\\begin{multicols*}{2}\n")
         for i in indices:
             t = templ_list[i]
-            print permutation, t.name
+            while isinstance(t, list):
+               t = random.choice(t)
+            # print permutation, t.name
             # Add to python path the directory of the template
             sys.path.append(os.path.dirname(t.name))
             q = core.publish_parts(t.generate(), writer = LaTeXWriter())
@@ -527,7 +527,7 @@ def generate_exam(permutation, config, templ_list, basename):
             for a in q['answers']: o.write(a[1])
             t_or_f = [a[0] for a in q['answers']]
             solutions += ['a', 'b', 'c', 'd', 'e', 'f'][t_or_f.index(True)]
-        print solutions
+        # print solutions
         o.write("\\end{multicols*}\n")
         o.write("\\end{document}\n")
 
@@ -536,14 +536,23 @@ def generate_exam(permutation, config, templ_list, basename):
 Makefile_text = """
 PDF=${pdflist}
 
-%.pdf: tex/%.tex
-\tpdflatex -halt-on-error $$<  2> /dev/null > /dev/null
+all: enunciat.pdf
 
 enunciat.pdf: $${PDF}
 \tpdftk $${PDF} cat output enunciat.pdf
-\trm -f $${PDF} *.aux *.log
+\trm -f $${PDF} *.aux *.log local.cls
 
-all: enunciat.pdf
+%.pdf: tex/%.tex local.cls
+\t@echo $$<
+\t@pdflatex -halt-on-error $$< 2> /dev/null > /dev/null
+
+local.cls:
+ifdef SOLUTIONS
+\t@echo Showing SOLUTIONS
+\t@ln -s solution.cls local.cls
+else
+\t@ln -s normal.cls local.cls
+endif
 
 view: all
 \tgnome-open enunciat.pdf
@@ -552,24 +561,48 @@ clean:
 \trm -f $${PDF} *.aux *.log enunciat.pdf
 """
 
-def explode_directories(root, filelist):
+Classfile_text = """\NeedsTeXFormat{LaTeX2e}[1995/12/01]
+\ProvidesClass{local}
+\LoadClass{test-fi}
+"""
+
+Classfile_solucio_text = """\NeedsTeXFormat{LaTeX2e}[1995/12/01]
+\ProvidesClass{local}
+\LoadClass{test-fi-solucio}
+"""
+
+def get_template_tree(question_list):
     """ Substitute directories with all the files within them """
-    _filelist = []
-    for f in filelist:
-        rf = os.path.join(root, f)
-        if os.path.isdir(rf):
-            for _root, _, files in os.walk(rf):
-                candidates = []
-                for f in files:
-                    _, ext = os.path.splitext(f)
-                    if ext in ['.rst', '.trst']:
-                        candidates.append(os.path.join(_root, f))
-                    else:
-                        print "Ignoring file %s" % f
-                _filelist.append(random.choice(candidates))
+    result = []
+    for path in question_list:
+        if os.path.isdir(path):
+            result.append(get_template_tree([os.path.join(path, f) for f in os.listdir(path)]))
         else:
-            _filelist.append(rf)
-    return _filelist
+            _, ext = os.path.splitext(path)
+            if ext in ['.rst', '.trst']:
+                result.append(path)
+            else:
+                print "Ignoring file %s" % path
+    return result
+
+def templatize(x):
+   if isinstance(x, list):
+      result = []
+      for item in x:
+         result.append(templatize(item))
+      return result
+   else:
+      fname = x.encode('utf-8')
+      text = _file2string(fname).encode('utf-8')
+      return template.Template(text, fname)
+
+def print_tree(x, level = 0):
+   if isinstance(x, list):
+      print " "*level + "::"
+      for item in x:
+         print_tree(item, level + 3)
+   else:
+      print " "*level + x
 
 def generate_exam_dir(config, output_dir, num_exams):
     lastdir = os.getcwd()
@@ -580,33 +613,39 @@ def generate_exam_dir(config, output_dir, num_exams):
     if not os.path.isdir('tex'): os.mkdir('tex')
 
     # Read questions
-    templs = []
-    root = config.get('preguntes', 'root')
-    filelist = config.get('preguntes', 'list').split('\n')
-    filelist = explode_directories(root, filelist)
-    with codecs.open('questions.inf', 'w', 'utf-8') as o:
-        for k, f in enumerate(filelist):
-            fname = f.encode('utf-8')
-            text = _file2string(fname).encode('utf-8')
-            templ = template.Template(text, fname)
-            templs.append(templ)
-            sha1 = hashlib.sha1(text).hexdigest()
-            o.write("%d;%s;%s\n" % (k, sha1, f))
+    root = os.path.abspath(config.get('preguntes', 'root'))
+    question_list = [os.path.join(root, f) for f in config.get('preguntes', 'list').split('\n')]
+    file_tree = get_template_tree(question_list)
 
+    # print_tree(file_tree)
+    # print
+
+    # with codecs.open('questions.inf', 'w', 'utf-8') as o:
+    # for k, f in enumerate(file_tree):
+        # fname = f.encode('utf-8')
+        # sha1 = hashlib.sha1(text).hexdigest()
+        # o.write("%d;%s;%s\n" % (k, sha1, f))
+    templates = templatize(file_tree)
 
     # Write each exam
     pdflist = ""
-    with open('exams.inf', 'w') as o:
+    with open('solution.inf', 'w') as o:
         for n in xrange(num_exams):
             prefix = 'exam_%04d' % n
             pdflist += prefix + '.pdf '
-            solutions, indices = generate_exam(n, config, templs, prefix)
-            o.write("%d;%s;%s\n" % (n, solutions, repr(indices)))
+            solutions, indices = generate_exam(n, config, templates, prefix)
+            o.write("%d;%s\n" % (n, solutions))
 
     # Write Makefile
     t = string.Template(Makefile_text)
     with open('Makefile', 'w') as o:
         o.write(t.substitute(pdflist=pdflist))
+
+    with open('normal.cls', 'w') as o:
+        o.write(Classfile_text)
+
+    with open('solution.cls', 'w') as o:
+        o.write(Classfile_solucio_text)
 
     print "Changing to " + lastdir
     os.chdir(lastdir)
@@ -615,5 +654,3 @@ class Prefs:
     base_category = 'Kwidgin'
     view_pdf_program = 'gnome-open'
     num_permutations = 5
-    show_answers = False
-
