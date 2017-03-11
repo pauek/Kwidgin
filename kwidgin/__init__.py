@@ -4,6 +4,7 @@
 import os, sys, codecs, os.path
 import escape, template, random, string, hashlib, re
 import ConfigParser, cStringIO
+import time
 from docutils import core, nodes, writers
 from docutils.parsers import rst
 from docutils.transforms import Transform
@@ -277,7 +278,7 @@ class HtmlTranslator(MoodleXMLTranslator):
 class LaTeXTranslator(BaseTranslator):
 
     def visit_question(self, node): 
-        self.put("\\begin{pregunta}\n")
+        self.put("\n\n\\begin{pregunta}\n")
         
     def depart_question(self, node):
         self.put("\\end{pregunta}\n")
@@ -292,11 +293,11 @@ class LaTeXTranslator(BaseTranslator):
         self.put('\n\n')
 
     def visit_literal_block(self, node):
-        self.put('\\vspace{-.4em}\n\\begin{Verbatim}[commentchar=@, commandchars=\\\\\\#$]\n')
+        self.put('\\vspace{-.55em}\n\\begin{Verbatim}[xleftmargin=5mm,commentchar=@,commandchars=\\\\\\#$]\n')
         text = node[0]
         text = re.sub(':box:`([^`]*)`', '\\wog#\\1$', text)
         self.put(text)
-        self.put('\n\\end{Verbatim}\n\\vspace{-.4em}')
+        self.put('\n\\end{Verbatim}\n\\vspace{-.55em}\n')
         raise nodes.SkipNode
 
     # def depart_literal_block(self, node):
@@ -494,7 +495,7 @@ def render(text, writer):
 def generate_exam(permutation, config, templ_list, basename):
     cfg = {}
     for x in ('assignatura', 'especialitat', 'temps', 'titol'):
-        cfg[x] = config.get(u'exàmen', x)
+        cfg[x] = config.get('examen', x)
     
     solutions = ""
     indices = range(len(templ_list))
@@ -549,7 +550,7 @@ enunciat.pdf: $${PDF}
 local.cls:
 ifdef SOLUTIONS
 \t@echo Showing SOLUTIONS
-\t@ln -s solution.cls local.cls
+\t@ln -s showsol.cls local.cls
 else
 \t@ln -s normal.cls local.cls
 endif
@@ -629,12 +630,25 @@ def generate_exam_dir(config, output_dir, num_exams):
 
     # Write each exam
     pdflist = ""
-    with open('solution.inf', 'w') as o:
+    with open('solutions.csv', 'w') as o:
         for n in xrange(num_exams):
             prefix = 'exam_%04d' % n
             pdflist += prefix + '.pdf '
             solutions, indices = generate_exam(n, config, templates, prefix)
             o.write("%d;%s\n" % (n, solutions))
+
+    # Write metadata
+    titol = config.get('examen', 'titol')
+    assignatura = config.get('examen', 'assignatura')
+    especialitat = config.get('examen', 'especialitat')
+    temps = config.get('examen', 'temps')
+    # data = config.get('examen', 'data')
+    with codecs.open('metadata.csv', 'w', 'utf-8') as o:
+        o.write('Titol;%s\n' % titol)
+        o.write('Assignatura;%s\n' % assignatura)
+        o.write('Especialitat;%s\n' % especialitat)
+        o.write('Temps;%s\n' % temps)
+        o.write('GenDate;%s\n' % time.asctime())
 
     # Write Makefile
     t = string.Template(Makefile_text)
@@ -644,7 +658,7 @@ def generate_exam_dir(config, output_dir, num_exams):
     with open('normal.cls', 'w') as o:
         o.write(Classfile_text)
 
-    with open('solution.cls', 'w') as o:
+    with open('showsol.cls', 'w') as o:
         o.write(Classfile_solucio_text)
 
     print "Changing to " + lastdir
