@@ -605,7 +605,7 @@ def print_tree(x, level = 0):
    else:
       print " "*level + x
 
-def generate_exam_dir(config, output_dir, num_exams):
+def generate_exam_dir(config, output_dir, num_permutations):
     lastdir = os.getcwd()
 
     # Create directories
@@ -631,7 +631,7 @@ def generate_exam_dir(config, output_dir, num_exams):
     # Write each exam
     pdflist = ""
     with open('solutions.csv', 'w') as o:
-        for n in xrange(num_exams):
+        for n in xrange(num_permutations):
             prefix = 'exam_%04d' % n
             pdflist += prefix + '.pdf '
             solutions, indices = generate_exam(n, config, templates, prefix)
@@ -649,6 +649,7 @@ def generate_exam_dir(config, output_dir, num_exams):
         o.write('Especialitat;%s\n' % especialitat)
         o.write('Temps;%s\n' % temps)
         o.write('GenDate;%s\n' % time.asctime())
+        o.write('NumPermutations;%d\n' % num_permutations)
 
     # Write Makefile
     t = string.Template(Makefile_text)
