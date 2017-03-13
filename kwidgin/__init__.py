@@ -3,7 +3,7 @@
 
 import os, sys, codecs, os.path
 import escape, template, random, string, hashlib, re
-import ConfigParser, cStringIO
+import ConfigParser, StringIO
 import time
 from docutils import core, nodes, writers
 from docutils.parsers import rst
@@ -435,104 +435,104 @@ def category_to_xml(out, name, permut=''):
     out.write(u'</question>')
 
 def directory_to_xml(out, topdir):
-    out.write(u'<quiz>')
-    for root, dirs, files in os.walk(topdir):
-        count = 0
-        t_rsts, rsts = [], []
-        relp = os.path.relpath(root, topdir)
-        absp = os.path.abspath(root)
-        for f in files:
-            prefix, ext = os.path.splitext(f)
-            if ext == ".rst":
-                print os.path.join(relp, f)
-                rsts.append(os.path.join(absp, f))
-            elif ext == '.trst':
-                print os.path.join(relp, f)
-                t_rsts.append(os.path.join(absp, f))
-            count += 1
-                    
-        if count > 0 and relp != ".":
-            category_to_xml(out, relp)
-        for r in rsts:
-            txt = _file2string(r)
-            try:
-                dic = core.publish_parts(txt, writer = MoodleXMLWriter())
-                question_to_xml(out, dic)
-            except Exception as e:
-                print txt
-                raise
-                
-        for t in t_rsts:
-            path = os.path.relpath(t, topdir)
-            prefix, _ = os.path.splitext(path)
-            category_to_xml(out, prefix, ' [PERMUT]')
-            templ = template.Template(_file2string(t).encode('utf-8'), 
-                                      os.path.basename(t))
-            for i in xrange(Prefs.num_permutations):
-                # Add to python path the directory of the template
-                sys.path.append(os.path.dirname(t))
-                text = templ.generate()
-                sys.path.pop()
-                #
-                dic = core.publish_parts(text, writer = MoodleXMLWriter())
-                patt = ' [perm. %%0%dd]' % int(ceil(log(Prefs.num_permutations, 10)))
-                dic['title'] += patt % i
-                question_to_xml(out, dic)
-    out.write(u'</quiz>')
+   out.write(u'<quiz>')
+   for root, dirs, files in os.walk(topdir):
+      count = 0
+      t_rsts, rsts = [], []
+      relp = os.path.relpath(root, topdir)
+      absp = os.path.abspath(root)
+      for f in files:
+         prefix, ext = os.path.splitext(f)
+         if ext == ".rst":
+            print os.path.join(relp, f)
+            rsts.append(os.path.join(absp, f))
+         elif ext == '.trst':
+            print os.path.join(relp, f)
+            t_rsts.append(os.path.join(absp, f))
+         count += 1
+                  
+      if count > 0 and relp != ".":
+         category_to_xml(out, relp)
+      for r in rsts:
+         txt = _file2string(r)
+         try:
+            dic = core.publish_parts(txt, writer = MoodleXMLWriter())
+            question_to_xml(out, dic)
+         except Exception as e:
+            print txt
+            raise
+              
+      for t in t_rsts:
+         path = os.path.relpath(t, topdir)
+         prefix, _ = os.path.splitext(path)
+         category_to_xml(out, prefix, ' [PERMUT]')
+         templ = template.Template(_file2string(t).encode('utf-8'), 
+                                   os.path.basename(t))
+         for i in xrange(Prefs.num_permutations):
+            # Add to python path the directory of the template
+            sys.path.append(os.path.dirname(t))
+            text = templ.generate()
+            sys.path.pop()
+            #
+            dic = core.publish_parts(text, writer = MoodleXMLWriter())
+            patt = ' [perm. %%0%dd]' % int(ceil(log(Prefs.num_permutations, 10)))
+            dic['title'] += patt % i
+            question_to_xml(out, dic)
+   out.write(u'</quiz>')
 
 ## Genexam (LaTeX publisher)
 
 def render(text, writer):
-    w = None
-    if writer == "latex":
-        w = LaTeXWriter()
-    elif writer == "moodlexml":
-        w = MoodleXMLWriter()
-    elif writer == "html":
-        w = HtmlWriter()
-    return core.publish_parts(text, writer = w)
+   w = None
+   if writer == "latex":
+      w = LaTeXWriter()
+   elif writer == "moodlexml":
+      w = MoodleXMLWriter()
+   elif writer == "html":
+      w = HtmlWriter()
+   return core.publish_parts(text, writer = w)
 
 def generate_exam(permutation, config, templ_list, basename):
-    cfg = {}
-    for x in ('assignatura', 'especialitat', 'temps', 'titol'):
-        cfg[x] = config.get('examen', x)
-    
-    solutions = ""
-    indices = range(len(templ_list))
-    random.shuffle(indices)
-    with codecs.open('tex/' + basename + '.tex', 'w', 'utf-8') as o:
-        o.write("%%%% Permutacio: %d\n" % permutation)
-        solucio = ""
-        o.write("\\documentclass{local}\n\n")
-        o.write("\\begin{document}")
-        o.write("\\Permutacio{%d}" % permutation)
-        o.write("\\Assignatura{%s}" % cfg['assignatura'])
-        o.write("\\Especialitat{%s}" % cfg['especialitat'])
-        o.write("\\TempsMaxim{%s}" % cfg['temps'])
-        o.write("\\Titol{%s}" % cfg['titol'])
-        o.write("\\NumPreguntes{%d}\n" % len(templ_list))
-        o.write("\\capsalera\n\n")
-        o.write("\\begin{multicols*}{2}\n")
-        for i in indices:
-            t = templ_list[i]
-            while isinstance(t, list):
-               t = random.choice(t)
-            # print permutation, t.name
-            # Add to python path the directory of the template
-            sys.path.append(os.path.dirname(t.name))
-            q = core.publish_parts(t.generate(), writer = LaTeXWriter())
-            sys.path.pop()
-            #
-            o.write(q['question'])
-            random.shuffle(q['answers'])
-            for a in q['answers']: o.write(a[1])
-            t_or_f = [a[0] for a in q['answers']]
-            solutions += ['a', 'b', 'c', 'd', 'e', 'f'][t_or_f.index(True)]
-        # print solutions
-        o.write("\\end{multicols*}\n")
-        o.write("\\end{document}\n")
-
-    return solutions, indices
+   cfg = {}
+   for x in ('assignatura', 'especialitat', 'temps', 'titol'):
+       cfg[x] = config.get('examen', x)
+   
+   solutions = ""
+   indices = range(len(templ_list))
+   random.shuffle(indices)
+   buf = StringIO.StringIO()
+   buf.write("\\documentclass{local}\n\n")
+   buf.write("\\begin{document}")
+   buf.write("\\Permutacio{%d}" % permutation)
+   buf.write("\\Assignatura{%s}" % cfg['assignatura'])
+   buf.write("\\Especialitat{%s}" % cfg['especialitat'])
+   buf.write("\\TempsMaxim{%s}" % cfg['temps'])
+   buf.write("\\Titol{%s}" % cfg['titol'])
+   buf.write("\\NumPreguntes{%d}\n" % len(templ_list))
+   buf.write("\\capsalera\n\n")
+   buf.write("\\begin{multicols*}{2}\n")
+   for i in indices:
+      t = templ_list[i]
+      while isinstance(t, list):
+         t = random.choice(t)
+      # print permutation, t.name
+      # Add to python path the directory of the template
+      sys.path.append(os.path.dirname(t.name))
+      q = core.publish_parts(t.generate(), writer = LaTeXWriter())
+      sys.path.pop()
+      #
+      buf.write(q['question'])
+      random.shuffle(q['answers'])
+      for a in q['answers']: 
+         buf.write(a[1])
+      t_or_f = [a[0] for a in q['answers']]
+      solutions += ['a', 'b', 'c', 'd', 'e', 'f'][t_or_f.index(True)]
+   # print solutions
+   buf.write("\\end{multicols*}\n")
+   buf.write("\\end{document}\n")
+   with codecs.open('tex/' + basename + '.tex', 'w', 'utf-8') as file:
+       file.write(buf.getvalue())
+   return solutions, indices
 
 Makefile_text = """
 PDF=${pdflist}
