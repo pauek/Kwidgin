@@ -501,7 +501,7 @@ def generate_exam(permutation, config, templ_list, basename):
    indices = range(len(templ_list))
    random.shuffle(indices)
    buf = StringIO.StringIO()
-   buf.write("\\documentclass{local}\n\n")
+
    buf.write("\\begin{document}")
    buf.write("\\Permutacio{%d}" % permutation)
    buf.write("\\Assignatura{%s}" % cfg['assignatura'])
@@ -530,37 +530,34 @@ def generate_exam(permutation, config, templ_list, basename):
    # print solutions
    buf.write("\\end{multicols*}\n")
    buf.write("\\end{document}\n")
-   with codecs.open('tex/' + basename + '.tex', 'w', 'utf-8') as file:
-       file.write(buf.getvalue())
+   with codecs.open('tex/' + basename + 'n.tex', 'w', 'utf-8') as file:
+      file.write("\\documentclass{test-fi}\n")
+      file.write(buf.getvalue())
+   with codecs.open('tex/' + basename + 's.tex', 'w', 'utf-8') as file:
+      file.write("\\documentclass{test-fi-solucio}\n")
+      file.write(buf.getvalue())
    return solutions, indices
 
 Makefile_text = """
-PDF=${pdflist}
+PDFS=${pdflist}
 
-all: all.pdf
-
-all.pdf: $${PDF}
-\tpdftk $${PDF} cat output all.pdf
-
-%.pdf: tex/%.tex local.cls
-\t@echo $$<
-\t@pdflatex -halt-on-error $$< 2> /dev/null > /dev/null
+all: alln.pdf alls.pdf
 \t@rm -f *.aux *.log
 
-local.cls:
-ifdef SOLUTIONS
-\t@echo Showing SOLUTIONS
-\t@ln -s showsol.cls local.cls
-else
-\t@echo NOT Showing SOLUTIONS
-\t@ln -s normal.cls local.cls
-endif
+alln.pdf: $${PDFS}
+\t@pdftk ????n.pdf cat output alln.pdf
+
+alls.pdf: $${PDFS}
+\t@pdftk ????s.pdf cat output alls.pdf
+
+%.pdf: tex/%.tex
+\t@pdflatex -halt-on-error $$< 2> /dev/null > /dev/null
 
 view: all
 \txdg-open all.pdf
 
 clean:
-\trm -f $${PDF} *.aux *.log local.cls all.pdf
+\trm -f *.pdf *.aux *.log local.cls
 """
 
 Classfile_text = """\NeedsTeXFormat{LaTeX2e}[1995/12/01]
@@ -639,7 +636,8 @@ def generate_exam_dir(config, output_dir, num_permutations):
     with open('solutions.csv', 'w') as o:
         for n in xrange(num_permutations):
             prefix = '%04d' % n
-            pdflist += prefix + '.pdf '
+            pdflist += prefix + 'n.pdf '
+            pdflist += prefix + 's.pdf '
             solutions, indices = generate_exam(n, config, templates, prefix)
             o.write("%d;%s\n" % (n, solutions))
 
