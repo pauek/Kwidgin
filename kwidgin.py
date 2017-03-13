@@ -38,7 +38,7 @@ def genexam(config_file,
             print "Success!"
             if view_pdf:
                 viewer = Prefs.view_pdf_program
-                os.system(viewer + " " + output_dir + "/enunciat.pdf")
+                os.system(viewer + " " + output_dir + "/all.pdf")
         else:
             print "Something went wrong"
 

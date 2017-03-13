@@ -537,29 +537,30 @@ def generate_exam(permutation, config, templ_list, basename):
 Makefile_text = """
 PDF=${pdflist}
 
-all: enunciat.pdf
+all: all.pdf
 
-enunciat.pdf: $${PDF}
-\tpdftk $${PDF} cat output enunciat.pdf
-\trm -f $${PDF} *.aux *.log local.cls
+all.pdf: $${PDF}
+\tpdftk $${PDF} cat output all.pdf
 
 %.pdf: tex/%.tex local.cls
 \t@echo $$<
 \t@pdflatex -halt-on-error $$< 2> /dev/null > /dev/null
+\t@rm -f *.aux *.log
 
 local.cls:
 ifdef SOLUTIONS
 \t@echo Showing SOLUTIONS
 \t@ln -s showsol.cls local.cls
 else
+\t@echo NOT Showing SOLUTIONS
 \t@ln -s normal.cls local.cls
 endif
 
 view: all
-\tgnome-open enunciat.pdf
+\txdg-open all.pdf
 
 clean:
-\trm -f $${PDF} *.aux *.log enunciat.pdf
+\trm -f $${PDF} *.aux *.log local.cls all.pdf
 """
 
 Classfile_text = """\NeedsTeXFormat{LaTeX2e}[1995/12/01]
@@ -637,7 +638,7 @@ def generate_exam_dir(config, output_dir, num_permutations):
     pdflist = ""
     with open('solutions.csv', 'w') as o:
         for n in xrange(num_permutations):
-            prefix = 'exam_%04d' % n
+            prefix = '%04d' % n
             pdflist += prefix + '.pdf '
             solutions, indices = generate_exam(n, config, templates, prefix)
             o.write("%d;%s\n" % (n, solutions))
