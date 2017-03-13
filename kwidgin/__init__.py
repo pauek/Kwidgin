@@ -605,6 +605,11 @@ def print_tree(x, level = 0):
    else:
       print " "*level + x
 
+def generation_date():
+   t = time.localtime()
+   parts = (t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec)
+   return "%04d%02d%02d%02d%02d%02d" % parts
+
 def generate_exam_dir(config, output_dir, num_permutations):
     lastdir = os.getcwd()
 
@@ -648,7 +653,7 @@ def generate_exam_dir(config, output_dir, num_permutations):
         o.write('Assignatura;%s\n' % assignatura)
         o.write('Especialitat;%s\n' % especialitat)
         o.write('Temps;%s\n' % temps)
-        o.write('GenDate;%s\n' % time.asctime())
+        o.write('GenDate;%s\n' % generation_date())
         o.write('NumPermutations;%d\n' % num_permutations)
 
     # Write Makefile
