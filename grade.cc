@@ -15,69 +15,90 @@ struct Student {
 typedef vector<string> Solutions;
 typedef vector<Student> Students;
 
-void replace_char(string& s, char a, char b) {
+string& replace_char(string& s, char a, char b) {
    for (int i = 0; i < s.size(); i++) {
       if (s[i] == a) s[i] = b;
    }
+   return s;
+}
+
+inline bool IsComment(string line) {
+   return line.size() > 0 && line[0] == '#';
 }
 
 template<class T>
-void set(vector<T>& v, int i, T t) {
+void Set(vector<T>& v, int i, T t) {
    if (v.size() <= i) {
       v.resize(i+1);
    }
    v[i] = t;
 }
 
-void read_students(const char *filename, Students& students) {
+void ReadStudents(string filename, Students& students) {
    ifstream F(filename);   
    string line;
+   int permutation;
+   Student student;
    while (getline(F, line)) {
-      char semicolon;
-      int permutation;
-      Student student;
-      replace_char(line, ';', ' ');
-      istringstream S(line);
+      if (IsComment(line)) {
+         continue;
+      }
+      istringstream S(replace_char(line, ';', ' '));
       if (S >> permutation >> student.DNI >> student.answers) {
-         set(students, permutation, student);
+         Set(students, permutation, student);
       }
    }
 }
 
-void read_solutions(const char *filename, Solutions& solutions) {
+void ReadSolutions(string filename, Solutions& solutions) {
    ifstream F(filename);
-   string line;
+   string line, solution;
+   int permutation;
    while (getline(F, line)) {
-      char semicolon;
-      int permutation;
-      string solution;
-      replace_char(line, ';', ' ');
-      istringstream S(line);
+      if (IsComment(line)) {
+         continue;
+      }
+      istringstream S(replace_char(line, ';', ' '));
       if (S >> permutation >> solution) {
-         set(solutions, permutation, solution);
+         Set(solutions, permutation, solution);
       }
    }
 }
 
-float compute_grade(const string& solution, const string& x) {
+double ComputeGrade(const string& solution, const string& x) {
    if (solution.size() != x.size()) {
-      cerr << "Mismatch in sizes ('" << solution << "' vs '" << x << "') !" << endl;
+      cerr << "Mismatch in sizes " 
+           << "('" << solution << "' vs '" << x << "') !" 
+           << endl;
       exit(1);
    }
    int count = 0;
-   float grade = 0.0f;
+   double grade = 0.0f;
+   int good = 0, bad = 0, not_answered = 0;
    for (int i = 0; i < solution.size(); i++) {
-      if (solution[i] == x[i]) {
-         grade += 1.0f;
+      if (x[i] == 'X') {
+         // pregunta anulada: no hay que incrementar contador
+      } else if (x[i] == '_') { 
+         // no contestada (no suma ni resta, pero es una más)
+         not_answered++;
          count++;
-      } else if (x[i] == 'X') { // pregunta anulada
-         // do not increment count!
-      } else if (x[i] != '_' and solution[i] != x[i]) {
-         grade -= 0.3333f;
+      } else if (solution[i] == x[i]) {
+         grade += 1.0f;
+         good++;
+         count++;
+      } else if (solution[i] != x[i]) {
+         grade -= 1.0/3.0;
+         bad++;
          count++;
       }
    }
-   return grade / float(count) * 10.0;
+   /*
+   cerr << endl << endl;
+   cerr << "good = " << good << endl;
+   cerr << "bad = " << bad << endl;
+   cerr << "not_answered = " << not_answered << endl;
+   */
+   return grade / double(count) * 10.0;
 }
 
 int main(int argc, char *argv[]) {
@@ -88,13 +109,14 @@ int main(int argc, char *argv[]) {
 
    Solutions solutions;
    Students students;
-   read_solutions(argv[1], solutions);
-   read_students(argv[2], students);
+   ReadSolutions(argv[1], solutions);
+   ReadStudents(argv[2], students);
 
    for (int i = 0; i < students.size(); i++) {
       if (students[i].DNI != "") {
          cout << i << ';' << students[i].DNI << ';';
-         cout << setprecision(2) << compute_grade(solutions[i], students[i].answers);
+         cout << setprecision(1) << fixed
+              << ComputeGrade(solutions[i], students[i].answers);
          cout << endl;
       }
    }
