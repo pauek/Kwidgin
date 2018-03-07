@@ -551,7 +551,7 @@ alls.pdf: $${PDFS}
 \t@pdftk ????s.pdf cat output alls.pdf
 
 %.pdf: tex/%.tex
-\t@pdflatex -halt-on-error $$< 2> /dev/null > /dev/null
+\t@xelatex -halt-on-error $$< 2> /dev/null > /dev/null
 
 view: all
 \txdg-open all.pdf
