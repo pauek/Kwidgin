@@ -21,6 +21,7 @@ def moodlexml(directory,
 def genexam(config_file,
             output_dir,
             num_permutations=('n', 10, 'Number of permutations to generate'),
+            num_columns=('c', 2, 'Number of columns on paper'),
             run_latex=('r', False, 'Call LaTeX to produce the PDF'),
             view_pdf=('v', False, 'Run LaTeX and show the PDF')):
     """Generate an exam as a directory with LaTeX files"""
@@ -28,7 +29,7 @@ def genexam(config_file,
     config = ConfigParser.RawConfigParser()
     with codecs.open(config_file, 'r', 'utf-8') as infile:
         config.readfp(infile)
-    kwidgin.generate_exam_dir(config, output_dir, num_permutations)
+    kwidgin.generate_exam_dir(config, output_dir, num_permutations, num_columns)
     if run_latex or view_pdf:
         print "Running LaTeX..."
         absdir = os.path.abspath(output_dir)

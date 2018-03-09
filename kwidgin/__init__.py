@@ -492,7 +492,7 @@ def render(text, writer):
       w = HtmlWriter()
    return core.publish_parts(text, writer = w)
 
-def generate_exam(permutation, config, templ_list, basename):
+def generate_exam(permutation, config, templ_list, basename, num_columns):
    cfg = {}
    for x in ('assignatura', 'especialitat', 'temps', 'titol'):
        cfg[x] = config.get('examen', x)
@@ -510,7 +510,7 @@ def generate_exam(permutation, config, templ_list, basename):
    buf.write("\\Titol{%s}" % cfg['titol'])
    buf.write("\\NumPreguntes{%d}\n" % len(templ_list))
    buf.write("\\capsalera\n\n")
-   buf.write("\\begin{multicols*}{2}\n")
+   buf.write("\\begin{multicols*}{%d}\n" % num_columns)
    for i in indices:
       t = templ_list[i]
       while isinstance(t, list):
@@ -608,7 +608,7 @@ def generation_date():
    parts = (t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec)
    return "%04d%02d%02d%02d%02d%02d" % parts
 
-def generate_exam_dir(config, output_dir, num_permutations):
+def generate_exam_dir(config, output_dir, num_permutations, num_columns):
     lastdir = os.getcwd()
 
     # Create directories
@@ -638,7 +638,7 @@ def generate_exam_dir(config, output_dir, num_permutations):
             prefix = '%04d' % n
             pdflist += prefix + 'n.pdf '
             pdflist += prefix + 's.pdf '
-            solutions, indices = generate_exam(n, config, templates, prefix)
+            solutions, indices = generate_exam(n, config, templates, prefix, num_columns)
             o.write("%d;%s\n" % (n, solutions))
 
     # Write metadata
@@ -671,5 +671,5 @@ def generate_exam_dir(config, output_dir, num_permutations):
 
 class Prefs:
     base_category = 'Kwidgin'
-    view_pdf_program = 'gnome-open'
+    view_pdf_program = 'xdg-open'
     num_permutations = 5
