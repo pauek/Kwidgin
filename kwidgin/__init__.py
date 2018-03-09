@@ -293,11 +293,11 @@ class LaTeXTranslator(BaseTranslator):
         self.put('\n\n')
 
     def visit_literal_block(self, node):
-        self.put('\\vspace{-.55em}\n\\begin{Verbatim}[xleftmargin=5mm,commentchar=@,commandchars=\\\\\\#$]\n')
+        self.put('\\vspace{-.55em}\n\\begin{Code}\n')
         text = node[0]
         text = re.sub(':box:`([^`]*)`', '\\wog#\\1$', text)
         self.put(text)
-        self.put('\n\\end{Verbatim}\n\\vspace{-.55em}\n')
+        self.put('\n\\end{Code}\n\\vspace{-.55em}\n')
         raise nodes.SkipNode
 
     # def depart_literal_block(self, node):
