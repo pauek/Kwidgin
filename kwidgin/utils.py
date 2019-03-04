@@ -5,18 +5,60 @@ import random
 
 letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
+words_es = {
+   "Todas": "Todas",
+   "todas": "todas",
+   "Ninguna": "Ninguna",
+   "ninguna": "ninguna",
+   "Todos": "Todos",
+   "todos": "todos",
+   "Ninguno": "Ninguno",
+   "ninguno": "ninguno",
+   "Vacío": "Vacío",
+   "vacío": "vacío",
+   "Sólo": "Sólo",
+   "sólo": "sólo",
+   "y": "y",
+}
+
+words_ca = {
+   "Todas": "Totes",
+   "todas": "totes",
+   "Ninguna": "Cap",
+   "ninguna": "cap",
+   "Todos": "Tots",
+   "todos": "tots",
+   "Ninguno": "Cap",
+   "ninguno": "cap",
+   "Vacío": "Buit",
+   "vacío": "buit",
+   "Sólo": "Només",
+   "sólo": "només",
+   "y": "i",
+}
+
+words = { "es": words_es, "ca": words_ca }
+WORDS = words["es"]
+
 def count_true(bitvector):
     return reduce(lambda x, y: x + (0, 1)[y], bitvector)
 
 def flip_coin():
    return random.choice([True, False])
 
+def set_language(lang):
+   if lang not in words.keys():
+      raise AssertionError("Language not supported")
+   print("Kwidgin::set_language: Language set to: " + lang)
+   global WORDS
+   WORDS = words[lang]
+
 class Lists:
     VariableTypes  = ['int', 'char', 'string', 'float', 'double', 'bool']
     FunctionTypes  = VariableTypes + ['void']
     VariableNames  = ['a', 'b', 'c', 'x', 'y', 'z', 'w', 't', 's']
     AttributeNames = ['mes', 'dia', 'nparaules', 'cont', 'taula', 'data', 'size'
-                      'x', 'y', 'z', 'a', 'b', 'c', ]
+                      'x', 'y', 'z', 'a', 'b', 'c']
     MethodNames    = ['es_primer', 'getTitle', 'size', 'push_back', 
                       'getX', 'getY', 'getZ', 'isEmpty', 'isActive', 'isClosed',
                       'numElements', 'setX', 'setY', 'setZ', 'setState',
@@ -81,18 +123,20 @@ def bitvector_random_sample(num_bits, num_vectors, except_zero = False):
     return [integer_to_bitvector(k, num_bits) 
             for k in random.sample(range(start, N), num_vectors)]
 
-def vector_to_text(vec, last_separator = ' i '):
+def vector_to_text(vec):
+    last_separator = " " + WORDS["y"] + " "
     svec = [str(i) for i in vec]
     if len(svec) == 0:
-        return "buit"
+        return WORDS["vacío"]
     elif len(svec) == 1:
         return svec[0]
     else:
         return ', '.join(svec[:-1]) + last_separator + svec[-1]
 
+
 def bitvector_to_text(vec, gender):
-    s_all = "Todos" if gender == "masc" else "Todas"
-    s_none = "Ninguno" if gender == "masc" else "Ninguna"
+    s_all = WORDS["Todos"] if gender == "masc" else WORDS["Todas"]
+    s_none = WORDS["Ninguno"] if gender == "masc" else WORDS["Ninguna"]
     num_true = count_true(vec)
     if num_true == len(vec):
         return s_all
@@ -101,9 +145,9 @@ def bitvector_to_text(vec, gender):
     else:
         good = [letters[i] for i in range(len(vec)) if vec[i]]
         if len(good) == 1:
-            return u'Sólo %s' % good[0]
+            return (WORDS["Sólo"] + ' %s') % good[0]
         else:
-            return ', '.join(good[:-1]) + ' y ' + good[-1]
+            return ', '.join(good[:-1]) + ' ' + WORDS["y"] + ' ' + good[-1]
 
 class Struct:
    def __init__(self, **entries): 
