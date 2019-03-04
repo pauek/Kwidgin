@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import kwidgin, codecs, opster, ConfigParser, os, sys, random
+import kwidgin, codecs, opster, configparser, os, sys, random
 from kwidgin import Prefs, template
 
 @opster.command(usage = '[options...] directory output_file')
@@ -26,7 +26,7 @@ def genexam(config_file,
             view_pdf=('v', False, 'Run LaTeX and show the PDF')):
     """Generate an exam as a directory with LaTeX files"""
     
-    config = ConfigParser.RawConfigParser()
+    config = configparser.RawConfigParser()
     with codecs.open(config_file, 'r', 'utf-8') as infile:
         config.readfp(infile)
     kwidgin.generate_exam_dir(config, output_dir, num_permutations, num_columns)

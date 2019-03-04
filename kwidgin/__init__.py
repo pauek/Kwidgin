@@ -1,15 +1,21 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
+# -*- coding: utf8 -*-
 
 import os, sys, codecs, os.path
 import escape, template, random, string, hashlib, re
-import ConfigParser, StringIO
+import configparser, StringIO
 import time
 from docutils import core, nodes, writers
 from docutils.parsers import rst
 from docutils.transforms import Transform
 from copy import copy
 from math import log, ceil
+
+
+class Prefs:
+    base_category = 'Kwidgin'
+    view_pdf_program = 'xdg-open'
+    num_permutations = 5
 
 ## Docutils nodes and directives
 
@@ -554,7 +560,7 @@ alls.pdf: $${PDFS}
 \t@xelatex -halt-on-error $$< 2> /dev/null > /dev/null
 
 view: all
-\txdg-open all.pdf
+\txdg-open alls.pdf
 
 clean:
 \trm -f *.pdf *.aux *.log local.cls
@@ -580,6 +586,8 @@ def get_template_tree(question_list):
             _, ext = os.path.splitext(path)
             if ext in ['.rst', '.trst']:
                 result.append(path)
+            elif ext in ['.py', '.pyc']:
+               pass # Nothing to do, this file probably is imported in the template
             else:
                 print "Ignoring file %s" % path
     return result
@@ -621,14 +629,7 @@ def generate_exam_dir(config, output_dir, num_permutations, num_columns):
     question_list = [os.path.join(root, f) for f in config.get('preguntes', 'list').split('\n')]
     file_tree = get_template_tree(question_list)
 
-    # print_tree(file_tree)
-    # print
-
-    # with codecs.open('questions.inf', 'w', 'utf-8') as o:
-    # for k, f in enumerate(file_tree):
-        # fname = f.encode('utf-8')
-        # sha1 = hashlib.sha1(text).hexdigest()
-        # o.write("%d;%s;%s\n" % (k, sha1, f))
+    # Read templates
     templates = templatize(file_tree)
 
     # Write each exam
@@ -657,19 +658,19 @@ def generate_exam_dir(config, output_dir, num_permutations, num_columns):
 
     # Write Makefile
     t = string.Template(Makefile_text)
-    with open('Makefile', 'w') as o:
-        o.write(t.substitute(pdflist=pdflist))
+    with open('Makefile', 'w') as file:
+        file.write(t.substitute(pdflist=pdflist))
 
-    with open('normal.cls', 'w') as o:
-        o.write(Classfile_text)
+    with open('normal.cls', 'w') as file:
+        file.write(Classfile_text)
 
-    with open('showsol.cls', 'w') as o:
-        o.write(Classfile_solucio_text)
+    with open('showsol.cls', 'w') as file:
+        file.write(Classfile_solucio_text)
+
+    # Save the configuration file in the same folder
+    with codecs.open('config.ini', 'w', 'utf-8') as file:
+        config.write(file)
 
     print "Changing to " + lastdir
     os.chdir(lastdir)
 
-class Prefs:
-    base_category = 'Kwidgin'
-    view_pdf_program = 'xdg-open'
-    num_permutations = 5

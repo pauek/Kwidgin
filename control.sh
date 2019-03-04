@@ -20,7 +20,7 @@ while true ; do
          ;;
       
       --two-column)
-         two_column='[twocolumn]'
+         two_column='[twocolumn,12pt]'
          shift 1
          ;;
 
@@ -50,16 +50,10 @@ fi
 # Preamble
 cat <<EOF
 \documentclass${two_column}{control}
-\usepackage[defaultmono,scale=.8]{droidmono}
-\usepackage{multicol}
-\usepackage{longtable,ltcaption,array}
-\newlength{\DUtablewidth}
-\usepackage{hyperref}
-\usepackage{t1enc}
 \usepackage{alltt}
 
 \Assignatura{EDOO}
-\Especialitat{Grau d'Audiovisuals}
+\Especialitat{Sistemes Audiovisuals}
 \Examen{$subject}
 \TempsMaxim{$temps}
 \chead{$date}
@@ -90,23 +84,15 @@ while true; do
    path=$(find -path '*'$file'*.minidosis' -type f | head -n 1 | cut -c3-)
    echo $path > /dev/stderr
 
-   title=$(title $path)
-   if ! [ -z "$punts" ]; then
-      title="$title [$punts]"
-      punts=""
-   fi
-   topics=''
-   if [ $show_topics == 'yes' ]; then
-       topics=$(targets $path)
-       echo $topics > /dev/stderr
-   fi
-   echo "\problema[$topics]{$title}"
-   echo
-
    if [ -z $path ]; then
       echo "Problem \"${path}\" not found" > /dev/stderr
       continue
    fi
+
+   title=$(title $path)
+   echo "\problema[$punts]{$title}"
+   echo
+
    rstfile=$(mktemp --suffix=.rst minidosis-XXXXXX) || (
       echo "Couldn't create temp file for ${file}" > /dev/stderr
       exit 1;
