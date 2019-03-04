@@ -31,17 +31,17 @@ def genexam(config_file,
         config.readfp(infile)
     kwidgin.generate_exam_dir(config, output_dir, num_permutations, num_columns)
     if run_latex or view_pdf:
-        print "Running LaTeX..."
+        print("Running LaTeX...")
         absdir = os.path.abspath(output_dir)
-        print absdir
+        print(absdir)
         ret = os.system("make -j8 -C " + output_dir)
         if ret == 0:
-            print "Success!"
+            print("Success!")
             if view_pdf:
                 viewer = Prefs.view_pdf_program
                 os.system(viewer + " " + output_dir + "/alls.pdf")
         else:
-            print "Something went wrong"
+            print("Something went wrong")
 
 @opster.command(usage = '[options...] question_file')
 def gen(question_file,
