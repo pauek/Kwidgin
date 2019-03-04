@@ -1,10 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf8 -*-
 
-import os, sys, codecs, os.path
-import escape, template, random, string, hashlib, re
-import configparser, StringIO
-import time
+import time, os, sys, codecs, os.path
+import html, random, string, hashlib, re, configparser
+from io import StringIO
 from docutils import core, nodes, writers
 from docutils.parsers import rst
 from docutils.transforms import Transform
@@ -132,7 +131,7 @@ class MoodleXMLTranslator(BaseTranslator):
 
     def visit_Text(self, node):
         txt = node.astext().encode('utf-8')
-        esc = escape.xhtml_escape(txt)
+        esc = html.escape(txt)
         self.put(esc.decode('utf-8'))
 
     def depart_Text(self, node): pass
@@ -472,9 +471,9 @@ def directory_to_xml(out, topdir):
          path = os.path.relpath(t, topdir)
          prefix, _ = os.path.splitext(path)
          category_to_xml(out, prefix, ' [PERMUT]')
-         templ = template.Template(_file2string(t).encode('utf-8'), 
-                                   os.path.basename(t))
-         for i in xrange(Prefs.num_permutations):
+         templ = string.Template(_file2string(t).encode('utf-8'), 
+                                 os.path.basename(t))
+         for i in range(Prefs.num_permutations):
             # Add to python path the directory of the template
             sys.path.append(os.path.dirname(t))
             text = templ.generate()
@@ -504,9 +503,9 @@ def generate_exam(permutation, config, templ_list, basename, num_columns):
        cfg[x] = config.get('examen', x)
    
    solutions = ""
-   indices = range(len(templ_list))
+   indices = [i for i in range(len(templ_list))]
    random.shuffle(indices)
-   buf = StringIO.StringIO()
+   buf = StringIO()
 
    buf.write("\\begin{document}")
    buf.write("\\Permutacio{%d}" % permutation)
@@ -566,14 +565,14 @@ clean:
 \trm -f $${PDFS} *.aux *.log local.cls
 """
 
-Classfile_text = """\NeedsTeXFormat{LaTeX2e}[1995/12/01]
-\ProvidesClass{local}
-\LoadClass{test-fi}
+Classfile_text = """\\NeedsTeXFormat{LaTeX2e}[1995/12/01]
+\\ProvidesClass{local}
+\\LoadClass{test-fi}
 """
 
-Classfile_solucio_text = """\NeedsTeXFormat{LaTeX2e}[1995/12/01]
-\ProvidesClass{local}
-\LoadClass{test-fi-solucio}
+Classfile_solucio_text = """\\NeedsTeXFormat{LaTeX2e}[1995/12/01]
+\\ProvidesClass{local}
+\\LoadClass{test-fi-solucio}
 """
 
 def get_template_tree(question_list):
@@ -635,7 +634,7 @@ def generate_exam_dir(config, output_dir, num_permutations, num_columns):
     # Write each exam
     pdflist = ""
     with open('solutions.csv', 'w') as o:
-        for n in xrange(num_permutations):
+        for n in range(num_permutations):
             prefix = '%04d' % n
             pdflist += prefix + 'n.pdf '
             pdflist += prefix + 's.pdf '

@@ -83,14 +83,8 @@ We provide the functions escape(), url_escape(), json_encode(), and squeeze()
 to all templates by default.
 """
 
-from __future__ import with_statement
-
-import cStringIO
-import datetime
-import escape
-import logging
-import os.path
-import re
+from io import StringIO
+import datetime, logging, os.path, re, html
 
 class Template(object):
     """A compiled template.
@@ -100,10 +94,9 @@ class Template(object):
     """
     def __init__(self, template_string, name="<string>", loader=None,
                  compress_whitespace=None):
-        self.name = name
+        self.name = name.decode()
         if compress_whitespace is None:
-            compress_whitespace = name.endswith(".html") or \
-                name.endswith(".js")
+            compress_whitespace = self.name.endswith((".html", ".js"))
         reader = _TemplateReader(name, template_string)
 
         self.preamble = _parse_preamble(reader)
@@ -119,13 +112,11 @@ class Template(object):
     def generate(self, **kwargs):
         """Generate this template with the given arguments."""
         namespace = {
-            "escape": escape.xhtml_escape,
-            "url_escape": escape.url_escape,
-            "squeeze": escape.squeeze,
+            "escape": html.escape,
             "datetime": datetime,
         }
         namespace.update(kwargs)
-        exec self.compiled in namespace
+        exec(self.compiled, namespace)
         execute = namespace["_execute"]
         try:
             return execute()
@@ -135,7 +126,7 @@ class Template(object):
             raise
 
     def _generate_python(self, loader, compress_whitespace):
-        buffer = cStringIO.StringIO()
+        buffer = StringIO()
         try:
             named_blocks = {}
             ancestors = self._get_ancestors(loader)
@@ -389,15 +380,15 @@ class _CodeWriter(object):
     def write_line(self, line, indent=None):
         if indent == None:
             indent = self._indent
-        for i in xrange(indent):
+        for i in range(indent):
             self.file.write("    ")
-        print >> self.file, line
+        print(line, file=self.file)
 
 
 class _TemplateReader(object):
     def __init__(self, name, text):
         self.name = name
-        self.text = text
+        self.text = text.decode()
         self.line = 0
         self.pos = 0
 
@@ -459,7 +450,7 @@ def _parse_preamble(reader):
         end = reader.find("%}")
         content = reader.consume(end)
         reader.consume(2)
-        io = cStringIO.StringIO(content)
+        io = StringIO(content)
         lines = [l[:-1] for l in io.readlines()]
         io.close()
     return lines

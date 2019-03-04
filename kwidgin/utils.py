@@ -41,7 +41,10 @@ words = { "es": words_es, "ca": words_ca }
 WORDS = words["es"]
 
 def count_true(bitvector):
-    return reduce(lambda x, y: x + (0, 1)[y], bitvector)
+   count = 0
+   for b in bitvector:
+      count += (1 if b else 0)
+   return count
 
 def flip_coin():
    return random.choice([True, False])
@@ -49,35 +52,63 @@ def flip_coin():
 def set_language(lang):
    if lang not in words.keys():
       raise AssertionError("Language not supported")
-   print("Kwidgin::set_language: Language set to: " + lang)
    global WORDS
    WORDS = words[lang]
 
 class Lists:
-    VariableTypes  = ['int', 'char', 'string', 'float', 'double', 'bool']
-    FunctionTypes  = VariableTypes + ['void']
-    VariableNames  = ['a', 'b', 'c', 'x', 'y', 'z', 'w', 't', 's']
-    AttributeNames = ['mes', 'dia', 'nparaules', 'cont', 'taula', 'data', 'size'
-                      'x', 'y', 'z', 'a', 'b', 'c']
-    MethodNames    = ['es_primer', 'getTitle', 'size', 'push_back', 
+    BasicTypes     = ['int', 'char', 'string', 'float', 'double', 'bool']
+    FunctionTypes  = BasicTypes + ['void']
+    VariableNames  = "abcdefghmnpqrstuvwxyz"
+    AttributeNames = ['mes', 'dia', 'npar', 'cont', 'taula', 'data', 'sz', 'size',
+                      'x', 'y', 'z', 'a', 'b', 'c', 'd', 'e', 'f', 'g',
+                      'm', 'n', 'p', 'q', 'r', 's', 't',
+                      'var', 'vx', 'vy', 'vz', 'tx', 'ty', 'tz', 
+                      'hi', 'ho', 'ha', 'he', 'hu',
+                      'ja', 'ji', 'je', 'jo', 'ju',
+                      'str', 'var', 'pos', 'vec',
+                      'nelem', 'nstr', 'nelm', 'npos', 'nvec',
+                      'bval', 'bcont', 'bvar', 'bpos', 'bvec',
+                      'mval', 'mcont', 'mpos', 'mvec', 'mvar',
+                      'mstr', 'mja', 'mji', 'mje', 'mjo', 'mju',
+                      ]
+    MethodNames    = ['esprimer', 'getTitle', 'size', 'pushBack', 
                       'getX', 'getY', 'getZ', 'isEmpty', 'isActive', 'isClosed',
                       'numElements', 'setX', 'setY', 'setZ', 'setState',
                       'llegeix', 'escriu', 'reset', 'output', 'input', 
                       'write', 'read', 'onMouseOver', 'onMouseMove',
                       'paintEvent', 'mouseMoveEvent', 'onLayout', 'isScrolling',
                       'scrollTo', 'scrollBy', 'first', 'second', 'third', 'last',
-                      'pop', 'push', 'push_front', 'pop_back', 'pop_front', 'count',
+                      'pop', 'push', 'pushFront', 'popBack', 'popFront', 'count',
                       'rotate', 'move', 'draw', 'remove', 'isIndexed', 'isDirty',
-                      'translate', 'scale']
-    AbstractClassNames = ['Vector', 'Visim', 'Scal', 'Patrat', 'Filint', 'Lwamb',
-                          'Incopel', 'Amila', 'Farigo', 'Vitrem', 'Salem', 'Fapto',
-                          'Argo', 'Letif', 'Motif', 'Liqis', 'Tartan', 'Maygo', 
-                          'Weebly', 'Arimac', 'Perfo', 'Libac', 'Polumon', 'Sfelk',
-                          'Yepto', 'Tamis', 'Wilou', 'Wefex', 'Wufoo', 'Mujat',
-                          'Molib', 'Velta', 'Garma', 'Farli', 'Plim', 'Remigo',
-                          'Robhik', 'Wepty', 'Spikla', 'Guarmo', 'Relpix', 'Fenam',
-                          'Pical', 'Gefren', 'Celib', 'Hafaik', 'Hamild', 'Helefi',
-                          'Lombev']
+                      'translate', 'scale', 'hohoho', 'hihihi', 'yay', 'hiThere',
+                      'amazing', 'awesome', 'isAwesome', 'isAmazing', 'tender', 'yupi',
+                      'cheat', 'print', 'printTo', 'toString', 'toBinary', 'toHex', 
+                      'toRad', 'asInt', 'asFloat', 'asDouble', 'asString'
+                      ]
+    ClassNames = ['Vect', 'Visim', 'Scal', 'Patrat', 'Flint', 'Lwamb',
+                  'Incop', 'Amila', 'Fario', 'Virem', 'Salem', 'Fapto',
+                  'Argo', 'Letif', 'Motif', 'Liqis', 'Tartan', 'Maygo', 
+                  'Weebly', 'Arim', 'Perfo', 'Libac', 'Polum', 'Sfelk',
+                  'Yepto', 'Tamis', 'Wilou', 'Wefex', 'Wufoo', 'Mujat',
+                  'Molib', 'Velta', 'Garma', 'Farli', 'Plim', 'Remigo',
+                  'Robik', 'Wepty', 'Spik', 'Guarmo', 'Relpix', 'Fenam',
+                  'Pical', 'Gefre', 'Celib', 'Afak', 'Hamild', 'Helefi',
+                  'Lomb', 'Yefren', 'Talib', 'Jexen', 'Yemid', 'Polef',
+                  'Takr', 'Falb', 'Poyux', 'Pilim', 'Pyref', 'Gerlox',
+                  'Suxir', 'Suker', 'Sukkar', 'Sixen', 'Sexin', 'Sox', 'Faxx',
+                  'Kilm', 'Roblo', 'Termis', 'Filym', 'Gerko', 'Gekor', 'Dekom',
+                  'Tilk', 'Farkom', 'Lemse', 'Lesmes', 'Lytro', 'Lyter', 
+                  'Layt', 'Layma', 'Lorf', 'Lurf', 'Hylan', 'Holem', 'Gilem',
+                  'Tars', 'Querso', 'Dorso', 'Darsi', 'Borka', 'Karma',
+                  'Weylan', 'Wayl', 'Weep', 'Weelow', 'Wikix', 'Wilix', 'Moorel',
+                  'Meerka', 'Talix', 'Tulix', 'Tupid', 'Zagr', 'Zigr', 'Zop',
+                  'Zap', 'Tap', 'Atol', 'Jux', 'Jolt', 'Box', 'Bry', 'Gol',
+                  'Gam', 'Gist', 'Ghas', 'Lum', 'Lip', 'Lap', 'Llop', 'Pom',
+                  'Pim', 'Rem', 'Ras', 'Rox', 'Rin', 'Qux', 'Quin', 'Xam',
+                  'Xip', 'Xap', 'Xof', 'Kas', 'Kog', 'Kou', 'Sal', 'Sol',
+                  'Sil', 'Was', 'Wuss', 'Wyle', 'Cap', 'Col', 'Cha', 'Chi', 
+                  'Jam', 'Gem', 'Ora', 'Oma', 'Ape', 'Are', 'Ama', 'Ara',
+                  ]
     ParameterLists = [
       '',
       'istream& i',
@@ -98,7 +129,7 @@ class Lists:
 
 def integer_to_bitvector(n, length):
     v = []
-    for i in xrange(length):
+    for i in range(length):
         q, r = divmod(n, 2)
         v.append(r == 1)
         n = q
