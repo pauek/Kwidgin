@@ -125,7 +125,7 @@ class BaseTranslator(nodes.NodeVisitor):
         raise nodes.SkipNode
 
     def unknown_visit(self, node):
-        print "WARNING: Visiting unknown node %s" % node.__class__.__name__
+        print("WARNING: Visiting unknown node %s" % node.__class__.__name__)
         raise nodes.SkipNode
     
 class MoodleXMLTranslator(BaseTranslator):
@@ -450,10 +450,10 @@ def directory_to_xml(out, topdir):
       for f in files:
          prefix, ext = os.path.splitext(f)
          if ext == ".rst":
-            print os.path.join(relp, f)
+            print(os.path.join(relp, f))
             rsts.append(os.path.join(absp, f))
          elif ext == '.trst':
-            print os.path.join(relp, f)
+            print(os.path.join(relp, f))
             t_rsts.append(os.path.join(absp, f))
          count += 1
                   
@@ -465,7 +465,7 @@ def directory_to_xml(out, topdir):
             dic = core.publish_parts(txt, writer = MoodleXMLWriter())
             question_to_xml(out, dic)
          except Exception as e:
-            print txt
+            print(txt)
             raise
               
       for t in t_rsts:
@@ -563,7 +563,7 @@ view: all
 \txdg-open alls.pdf
 
 clean:
-\trm -f *.pdf *.aux *.log local.cls
+\trm -f $${PDFS} *.aux *.log local.cls
 """
 
 Classfile_text = """\NeedsTeXFormat{LaTeX2e}[1995/12/01]
@@ -589,7 +589,7 @@ def get_template_tree(question_list):
             elif ext in ['.py', '.pyc']:
                pass # Nothing to do, this file probably is imported in the template
             else:
-                print "Ignoring file %s" % path
+                print("Ignoring file %s" % path)
     return result
 
 def templatize(x):
@@ -605,11 +605,11 @@ def templatize(x):
 
 def print_tree(x, level = 0):
    if isinstance(x, list):
-      print " "*level + "::"
+      print(" "*level + "::")
       for item in x:
          print_tree(item, level + 3)
    else:
-      print " "*level + x
+      print(" "*level + x)
 
 def generation_date():
    t = time.localtime()
@@ -671,6 +671,6 @@ def generate_exam_dir(config, output_dir, num_permutations, num_columns):
     with codecs.open('config.ini', 'w', 'utf-8') as file:
         config.write(file)
 
-    print "Changing to " + lastdir
+    print("Changing to " + lastdir)
     os.chdir(lastdir)
 
