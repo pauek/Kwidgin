@@ -57,6 +57,16 @@ def set_language(lang):
 
 class Lists:
     BasicTypes     = ['int', 'char', 'string', 'float', 'double', 'bool']
+
+    Values = {
+       'int': ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-1', '-2', '-3', '-4', '-5'],
+       'char': ["'%s'" % c for c in "abcdefghijkl$%;:?1234567890ABCDEFGHJIKL"],
+       'float': ['1.0', '0.1', '0.5', '3.14', '2.78', '0.55', '0.01', '10.7', '7.3', '8.4'],
+       'double': ['1.0', '0.1', '0.5', '3.14', '2.78', '0.55', '0.01', '10.7', '7.3', '8.4'],
+       'bool': ['true', 'false'],
+       'string': ['"abc"', '"xyz"', '"123"', '"xxx"', '"@#%"', '"***"', '"---"', '"hi!"', '"there!"']
+    }
+
     FunctionTypes  = BasicTypes + ['void']
     VariableNames  = "abcdefghmnpqrstuvwxyz"
     AttributeNames = ['mes', 'dia', 'npar', 'cont', 'taula', 'data', 'sz', 'size',
@@ -165,7 +175,7 @@ def vector_to_text(vec):
         return ', '.join(svec[:-1]) + last_separator + svec[-1]
 
 
-def bitvector_to_text(vec, gender):
+def bitvector_to_text(vec, gender, options=letters):
     s_all = WORDS["Todos"] if gender == "masc" else WORDS["Todas"]
     s_none = WORDS["Ninguno"] if gender == "masc" else WORDS["Ninguna"]
     num_true = count_true(vec)
@@ -174,7 +184,7 @@ def bitvector_to_text(vec, gender):
     elif num_true == 0:
         return s_none
     else:
-        good = [letters[i] for i in range(len(vec)) if vec[i]]
+        good = [options[i] for i in range(len(vec)) if vec[i]]
         if len(good) == 1:
             return (WORDS["Sólo"] + ' %s') % good[0]
         else:
