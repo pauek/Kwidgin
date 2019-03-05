@@ -109,6 +109,9 @@ class Template(object):
             logging.error("%s code:\n%s", self.name, formatted_code)
             raise
 
+    def __str__(self):
+       return self.name
+
     def generate(self, **kwargs):
         """Generate this template with the given arguments."""
         namespace = {

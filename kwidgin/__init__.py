@@ -519,6 +519,8 @@ def generate_exam(permutation, config, templ_list, basename, num_columns):
    for i in indices:
       t = templ_list[i]
       while isinstance(t, list):
+         if len(t) == 0:
+            raise RuntimeError("No templates in %d, \ntemplate_list=%s" % (i, templ_list.__str__()))
          t = random.choice(t)
       # print permutation, t.name
       # Add to python path the directory of the template
@@ -562,7 +564,7 @@ view: all
 \txdg-open alls.pdf
 
 clean:
-\trm -f $${PDFS} *.aux *.log local.cls
+\t@rm -f $${PDFS} *.aux *.log local.cls
 """
 
 Classfile_text = """\\NeedsTeXFormat{LaTeX2e}[1995/12/01]
@@ -580,7 +582,9 @@ def get_template_tree(question_list):
     result = []
     for path in question_list:
         if os.path.isdir(path):
-            result.append(get_template_tree([os.path.join(path, f) for f in os.listdir(path)]))
+            templ_list = get_template_tree([os.path.join(path, f) for f in os.listdir(path)])
+            if len(templ_list) > 0:
+               result.append(templ_list)
         else:
             _, ext = os.path.splitext(path)
             if ext in ['.rst', '.trst']:
