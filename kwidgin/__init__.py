@@ -545,6 +545,8 @@ def generate_exam(permutation, config, templ_list, basename, num_columns):
       file.write(buf.getvalue())
    return solutions, indices
 
+
+
 Makefile_text = """
 PDFS=${pdflist}
 
@@ -552,10 +554,10 @@ all: alln.pdf alls.pdf
 \t@rm -f *.aux *.log
 
 alln.pdf: $${PDFS}
-\t@pdftk ????n.pdf cat output alln.pdf
+\t@${alln_command}
 
 alls.pdf: $${PDFS}
-\t@pdftk ????s.pdf cat output alls.pdf
+\t@${alls_command}
 
 %.pdf: tex/%.tex
 \t@xelatex -halt-on-error $$< 2> /dev/null > /dev/null
@@ -658,11 +660,22 @@ def generate_exam_dir(config, output_dir, num_permutations, num_columns):
         o.write('Temps;%s\n' % temps)
         o.write('GenDate;%s\n' % generation_date())
         o.write('NumPermutations;%d\n' % num_permutations)
-
+   
     # Write Makefile
+    if sys.platform == "darwin":
+        alls_command = 'pdfjoin -o alls.pdf ????s.pdf'
+        alln_command = 'pdfjoin -o alln.pdf ????n.pdf'
+    else:
+        alls_command = 'pdftk ????s.pdf cat output alls.pdf'
+        alln_command = 'pdftk ????n.pdf cat output alln.pdf'
+
     t = string.Template(Makefile_text)
     with open('Makefile', 'w') as file:
-        file.write(t.substitute(pdflist=pdflist))
+        file.write(t.substitute(
+           pdflist=pdflist, 
+           alls_command=alls_command,
+           alln_command=alln_command,
+        ))
 
     with open('normal.cls', 'w') as file:
         file.write(Classfile_text)
